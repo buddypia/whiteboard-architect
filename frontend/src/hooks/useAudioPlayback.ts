@@ -8,7 +8,7 @@ import { base64ToArrayBuffer, int16ToFloat32 } from "@/lib/audio-utils";
 // seconds ahead of `ctx.currentTime`, we assume the queue built up while the
 // tab was backgrounded (AudioContext suspended → currentTime frozen) and reset
 // the timeline to avoid a burst of catch-up audio on tab return.
-const MAX_SCHEDULE_AHEAD_S = 5;
+const MAX_SCHEDULE_AHEAD_S = 120;
 
 // Grace period (ms) before declaring playback ended.  Bridges small gaps
 // between consecutive audio chunks so `isPlaying` doesn't oscillate
@@ -117,6 +117,10 @@ export function useAudioPlayback() {
         // drifted far into the future (audio kept arriving while currentTime
         // was frozen).  Reset to "now" to avoid a burst of catch-up audio.
         if (nextStartTimeRef.current - now > MAX_SCHEDULE_AHEAD_S) {
+          for (const s of activeSourcesRef.current) {
+            try { s.stop(); } catch {}
+          }
+          activeSourcesRef.current.clear();
           nextStartTimeRef.current = now;
         }
 

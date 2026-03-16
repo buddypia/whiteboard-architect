@@ -124,6 +124,7 @@ export function useAudioCapture({
           vadOnsetCountRef.current++;
           vadOffsetCountRef.current = 0;
           if (!isUserSpeakingRef.current && vadOnsetCountRef.current >= onsetFrames) {
+            console.debug("[useAudioCapture] Speech onset detected", { rms, rmsThreshold, vadOnsetCount: vadOnsetCountRef.current });
             isUserSpeakingRef.current = true;
             speechStartedThisFrame = true;
             setIsUserSpeaking(true);
@@ -132,6 +133,7 @@ export function useAudioCapture({
           vadOffsetCountRef.current++;
           vadOnsetCountRef.current = 0;
           if (isUserSpeakingRef.current && vadOffsetCountRef.current >= VAD_OFFSET_FRAMES) {
+            console.debug("[useAudioCapture] Speech offset detected", { rms, rmsThreshold, vadOffsetCount: vadOffsetCountRef.current });
             isUserSpeakingRef.current = false;
             speechEndedThisFrame = true;
             setIsUserSpeaking(false);
@@ -154,39 +156,15 @@ export function useAudioCapture({
           return;
         }
 
-        // During agent playback: buffer frames and forward on barge-in
-        if (isForwardingDuringPlaybackRef.current) {
-          sendJsonRef.current(message);
-          if (speechEndedThisFrame) {
-            isForwardingDuringPlaybackRef.current = false;
-            playbackPrerollRef.current = [];
-          }
-          return;
-        }
-
-        playbackPrerollRef.current.push(base64);
-        if (playbackPrerollRef.current.length > PLAYBACK_PREROLL_FRAMES) {
-          playbackPrerollRef.current.shift();
-        }
-
-        if (!speechStartedThisFrame) {
-          return;
-        }
-
-        // Notify the backend that a real barge-in is starting so it
-        // opens the audio gate (it blocks ambient noise by default
-        // during agent response to prevent Gemini's false interrupts).
-        sendJsonRef.current({ type: "control", action: "barge_in" });
-
-        isForwardingDuringPlaybackRef.current = true;
-        const prerollFrames = playbackPrerollRef.current;
-        playbackPrerollRef.current = [];
-        for (const frame of prerollFrames) {
-          sendJsonRef.current({
-            type: "audio",
-            data: frame,
-          } satisfies AudioMessage);
-        }
+        // During agent playback: Always send silence to ensure Archie NEVER 
+        // gets interrupted by echo or user noise. This fulfills the requirement:
+        // "Archieが必ず喋るようにしてください。" (Ensure Archie always speaks to the end).
+        const silentData = new Int16Array(int16Data.length);
+        sendJsonRef.current({
+          type: "audio",
+          data: arrayBufferToBase64(silentData.buffer as ArrayBuffer),
+        } satisfies AudioMessage);
+        return;
       };
 
       source.connect(workletNode);

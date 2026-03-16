@@ -18,7 +18,10 @@ import { ImageUploadZone } from "@/components/ImageUploadZone";
 import { ServerMessage, SessionMode, TranscriptEntry, Snapshot, ReviewNote, Annotation, AgentMood, AgentActivity, ErrorMessage, WhiteboardAnalysisMessage } from "@/lib/types";
 import { ANNOTATION_EXPIRE_MS, TOAST_DISPLAY_MS, TRANSCRIPT_MERGE_WINDOW_MS, BARGE_IN_RESET_MS, MOOD_RESET_MS } from "@/lib/constants";
 
-const TRANSLATION_DEBOUNCE_MS = 1500;
+// Debounce must exceed TRANSCRIPT_MERGE_WINDOW_MS (2000ms) so that the
+// "sealed" check (Date.now() - timestamp > mergeWindow) passes even for the
+// last transcript entry.  Otherwise the final agent message is never translated.
+const TRANSLATION_DEBOUNCE_MS = TRANSCRIPT_MERGE_WINDOW_MS + 500;
 
 function generateId(): string {
   if (typeof crypto !== "undefined" && crypto.randomUUID) {
@@ -308,7 +311,10 @@ export function SessionApp() {
 
         case "turn_complete":
           clearAgentOutputLock();
-          retireTurn(event.turnId);
+          // We DO NOT call retireTurn() or clear activeAgentTurnIdRef here.
+          // Gemini sometimes completes the turn on the backend but audio chunks
+          // are still arriving. Retiring it here would drop the remainder of
+          // Archie's speech, causing it to randomly cut off.
           setIsAgentThinking(false);
           break;
 
@@ -379,11 +385,13 @@ export function SessionApp() {
           const fullUrl = `${getBackendBase()}${event.url}`;
 
           setSnapshots((prev) => {
-            // If a recent manual snapshot exists (no url yet), update it
+            // If a recent manual snapshot exists (no url yet), update it.
+            // Sync the id to the backend-generated snapshot_id so that
+            // review_snapshot can locate the file on disk.
             for (let i = prev.length - 1; i >= 0; i--) {
               if (!prev[i].url && Date.now() - prev[i].timestamp < 10000) {
                 const updated = [...prev];
-                updated[i] = { ...updated[i], url: fullUrl, label: event.description };
+                updated[i] = { ...updated[i], id: event.id, url: fullUrl, label: event.description };
                 return updated;
               }
             }
@@ -398,6 +406,15 @@ export function SessionApp() {
               },
             ];
           });
+
+          // Sync selectedSnapshot if it references the same unsaved snapshot
+          // (user clicked the snapshot before snapshot_saved arrived).
+          // Uses the same heuristic: recent + no URL = the snapshot we just saved.
+          setSelectedSnapshot((sel) =>
+            sel && !sel.url && Date.now() - sel.timestamp < 10000
+              ? { ...sel, id: event.id, url: fullUrl, label: event.description }
+              : sel
+          );
           break;
         }
 
@@ -441,8 +458,11 @@ export function SessionApp() {
     [clearAgentOutputLock, handleUiError, markAgentOutputActive, playAudio, resetForNewTurn, retireTurn, showToast, stopPlayback]
   );
 
-  // Fetch Japanese translations for finalized agent/thought entries
+  // Fetch Japanese translations for finalized agent entries.
+  // Uses a retry counter so that failed translations are re-attempted
+  // even when `transcripts` itself hasn't changed.
   const translatingIdsRef = useRef<Set<string>>(new Set());
+  const [translationRetry, setTranslationRetry] = useState(0);
   useEffect(() => {
     const timer = setTimeout(() => {
       const untranslated = transcripts.filter(
@@ -472,16 +492,20 @@ export function SessionApp() {
                   t.id === entry.id ? { ...t, translation: data.translation } : t
                 )
               );
+            } else {
+              setTranslationRetry((n) => n + 1);
             }
           })
-          .catch(() => {})
+          .catch(() => {
+            setTranslationRetry((n) => n + 1);
+          })
           .finally(() => {
             translatingIdsRef.current.delete(entry.id);
           });
       }
     }, TRANSLATION_DEBOUNCE_MS);
     return () => clearTimeout(timer);
-  }, [transcripts]);
+  }, [transcripts, translationRetry]);
 
   const { connectionState, sendJson, connect, disconnect } = useWebSocket({
     url: wsUrl,

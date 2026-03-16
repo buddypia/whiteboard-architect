@@ -1,12 +1,20 @@
-"""Firestore service for session, snapshot, and review note persistence."""
+"""Firestore service for session, snapshot, and review note persistence.
+
+Lazy initialization: the Firestore client is created on first use rather than
+at import time so that transient metadata-server failures during Cloud Run
+cold starts do not permanently disable the service.
+"""
 
 from __future__ import annotations
 
 import logging
+import time
 from datetime import datetime, timezone
 from typing import Any
 
 logger = logging.getLogger(__name__)
+
+_INIT_RETRY_COOLDOWN_S = 30
 
 
 class FirestoreService:
@@ -20,9 +28,25 @@ class FirestoreService:
 
     def __init__(self, project_id: str = "") -> None:
         self._db = None
+        self._project_id = project_id
+        self._init_retry_after = 0.0
+
         if not project_id:
             logger.info("Firestore disabled: GOOGLE_CLOUD_PROJECT not set")
+            self._init_retry_after = float("inf")
             return
+
+        self._try_initialize()
+
+    def _try_initialize(self) -> bool:
+        """Attempt to create the Firestore client. Returns True on success."""
+        if self._db is not None:
+            return True
+
+        now = time.monotonic()
+        if now < self._init_retry_after:
+            return False
+
         try:
             from google.auth import default as _default_credentials
             from google.auth.transport.requests import Request as _AuthRequest
@@ -34,16 +58,27 @@ class FirestoreService:
 
             from google.cloud.firestore import AsyncClient
 
-            self._db = AsyncClient(project=project_id, credentials=credentials)
-            logger.info("Firestore client initialized (project=%s)", project_id)
+            self._db = AsyncClient(
+                project=self._project_id, credentials=credentials
+            )
+            self._init_retry_after = 0.0
+            logger.info(
+                "Firestore client initialized (project=%s)", self._project_id
+            )
+            return True
         except Exception as exc:
             logger.warning(
-                "Firestore unavailable - running without persistence: %s",
+                "Firestore init failed (will retry in %ds): %s",
+                _INIT_RETRY_COOLDOWN_S,
                 exc,
             )
+            self._init_retry_after = now + _INIT_RETRY_COOLDOWN_S
+            return False
 
     @property
     def available(self) -> bool:
+        if self._db is None:
+            self._try_initialize()
         return self._db is not None
 
     async def create_session_record(self, session_id: str, user_id: str) -> dict[str, Any]:

@@ -159,6 +159,18 @@ export const TranscriptPanel = memo(function TranscriptPanel({
         )}
       </div>
 
+      {/* Bilingual column headers */}
+      {transcripts.length > 0 && (
+        <div className="grid grid-cols-2 gap-0 px-4 py-1.5 border-b border-[var(--border-subtle)] bg-[var(--surface)]/50">
+          <span className="text-[10px] font-semibold text-[var(--foreground-muted)] uppercase tracking-wider">
+            English
+          </span>
+          <span className="text-[10px] font-semibold text-[var(--foreground-muted)] uppercase tracking-wider pl-3 border-l border-[var(--border-subtle)]">
+            日本語
+          </span>
+        </div>
+      )}
+
       {/* Messages */}
       <div
         ref={scrollRef}
@@ -175,40 +187,55 @@ export const TranscriptPanel = memo(function TranscriptPanel({
         {transcripts.filter((e) => e.role !== "thought").map((entry) => (
             <div
               key={entry.id}
-              className={`flex gap-2.5 animate-slide-up ${
-                entry.role === "user" ? "flex-row-reverse" : "flex-row"
-              }`}
+              className="animate-slide-up"
             >
-              <Avatar role={entry.role} />
-              <div
-                className={`min-w-0 rounded-xl relative max-w-[85%] px-3.5 py-2.5 ${
-                  entry.role === "user"
-                    ? "bg-[var(--accent)]/90 text-[var(--on-accent)] rounded-tr-sm"
-                    : "bg-[var(--surface)] text-[var(--foreground)] border border-[var(--border-subtle)] rounded-tl-sm"
-                }`}
-              >
-                {/* Pin icon for speech-linked annotation */}
-                {entry.role === "agent" && activeAnnotationId && (
-                  <div className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-[var(--warning)] flex items-center justify-center animate-fade-in z-10" title="ホワイトボード参照中">
-                    <svg width="8" height="8" viewBox="0 0 24 24" fill="var(--on-accent)" aria-hidden="true">
-                      <path d="M16 12V4h1V2H7v2h1v8l-2 2v2h5.2v6h1.6v-6H18v-2l-2-2z"/>
-                    </svg>
+              {/* User messages: single column, right-aligned */}
+              {entry.role === "user" ? (
+                <div className="flex gap-2.5 flex-row-reverse">
+                  <Avatar role={entry.role} />
+                  <div className="min-w-0 rounded-xl relative max-w-[85%] px-3.5 py-2.5 bg-[var(--accent)]/90 text-[var(--on-accent)] rounded-tr-sm">
+                    <div className="text-sm leading-relaxed break-words transcript-markdown" style={{ overflowWrap: "anywhere" }}>
+                      <ReactMarkdown>{entry.text}</ReactMarkdown>
+                    </div>
+                    <p className="text-[10px] mt-1.5 tabular-nums text-right text-[var(--on-accent)]/70">
+                      {formatTime(entry.timestamp)}
+                    </p>
                   </div>
-                )}
-
-                <div className="text-sm leading-relaxed break-words transcript-markdown" style={{ overflowWrap: "anywhere" }}>
-                  <ReactMarkdown>{entry.translation || entry.text}</ReactMarkdown>
                 </div>
-                <p
-                  className={`text-[10px] mt-1.5 tabular-nums text-right ${
-                    entry.role === "user"
-                      ? "text-[var(--on-accent)]/70"
-                      : "text-[var(--foreground-subtle)]"
-                  }`}
-                >
-                  {formatTime(entry.timestamp)}
-                </p>
-              </div>
+              ) : (
+                /* Agent messages: bilingual two-column layout */
+                <div className="flex gap-2.5 flex-row">
+                  <Avatar role={entry.role} />
+                  <div className="min-w-0 flex-1 rounded-xl relative px-3.5 py-2.5 bg-[var(--surface)] text-[var(--foreground)] border border-[var(--border-subtle)] rounded-tl-sm">
+                    {/* Pin icon for speech-linked annotation */}
+                    {activeAnnotationId && (
+                      <div className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-[var(--warning)] flex items-center justify-center animate-fade-in z-10" title="ホワイトボード参照中">
+                        <svg width="8" height="8" viewBox="0 0 24 24" fill="var(--on-accent)" aria-hidden="true">
+                          <path d="M16 12V4h1V2H7v2h1v8l-2 2v2h5.2v6h1.6v-6H18v-2l-2-2z"/>
+                        </svg>
+                      </div>
+                    )}
+
+                    <div className="grid grid-cols-2 gap-0 min-h-0">
+                      {/* Left: English (main) */}
+                      <div className="pr-2.5 text-sm leading-relaxed break-words transcript-markdown" style={{ overflowWrap: "anywhere" }}>
+                        <ReactMarkdown>{entry.text}</ReactMarkdown>
+                      </div>
+                      {/* Right: Japanese (sub) */}
+                      <div className="pl-2.5 border-l border-[var(--border-subtle)] text-xs leading-relaxed break-words text-[var(--foreground-muted)] transcript-markdown" style={{ overflowWrap: "anywhere" }}>
+                        {entry.translation ? (
+                          <ReactMarkdown>{entry.translation}</ReactMarkdown>
+                        ) : (
+                          <span className="text-[var(--foreground-subtle)] italic text-[10px]">翻訳中...</span>
+                        )}
+                      </div>
+                    </div>
+                    <p className="text-[10px] mt-1.5 tabular-nums text-right text-[var(--foreground-subtle)]">
+                      {formatTime(entry.timestamp)}
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
           ))}
 
