@@ -14,6 +14,7 @@ import { SessionSummary } from "@/components/SessionSummary";
 import { SnapshotGallery } from "@/components/SnapshotGallery";
 import { SnapshotReviewView } from "@/components/SnapshotReviewView";
 import { DiagramPanel } from "@/components/DiagramPanel";
+import { WhiteboardAnalysisPanel } from "@/components/WhiteboardAnalysisPanel";
 import { ImageUploadZone } from "@/components/ImageUploadZone";
 import { ServerMessage, SessionMode, TranscriptEntry, Snapshot, ReviewNote, Annotation, AgentMood, AgentActivity, ErrorMessage, WhiteboardAnalysisMessage } from "@/lib/types";
 import { ANNOTATION_EXPIRE_MS, TOAST_DISPLAY_MS, TRANSCRIPT_MERGE_WINDOW_MS, BARGE_IN_RESET_MS, MOOD_RESET_MS } from "@/lib/constants";
@@ -361,7 +362,10 @@ export function SessionApp() {
             isSpeechLinked: event.isSpeechLinked,
             timestamp: Date.now(),
           };
-          setAnnotations((prev) => [...prev, ann]);
+          setAnnotations((prev) => {
+            const filtered = prev.filter((a) => a.id !== ann.id);
+            return [...filtered, ann];
+          });
           if (ann.isSpeechLinked) {
             setActiveAnnotationId(ann.id);
           }
@@ -854,6 +858,7 @@ export function SessionApp() {
             isAgentThinking={isAgentThinking}
             viewMode={viewMode}
           />
+          <WhiteboardAnalysisPanel analysis={whiteboardAnalysis} />
           <ReviewNotesPanel notes={reviewNotes} />
         </div>
       </main>

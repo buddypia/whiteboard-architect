@@ -25,10 +25,11 @@ Whiteboard architecture sessions are foundational to software development, but t
 | **Barge-in Support** | Interrupt the AI mid-sentence, just like talking to a real person |
 | **5-Axis Architecture Review** | Instant feedback on Security, Scalability, Reliability, Cost, and Operations |
 | **Visual Annotations** | AI highlights specific areas on the whiteboard with circles, arrows, rectangles, and labels |
-| **Background Analysis** | Periodic deep analysis of the whiteboard via Gemini 3 Flash for proactive insights |
-| **Auto Diagram Generation** | Converts hand-drawn whiteboard sketches into clean, professional technical diagrams |
+| **Background Analysis** | Periodic deep analysis of the whiteboard via Gemini 3.1 Flash Lite for proactive insights |
+| **Auto Diagram Generation** | Converts hand-drawn whiteboard sketches into clean, professional SVG diagrams |
+| **Bilingual Transcript** | Agent speaks English; transcripts displayed in both English and Japanese |
 | **Review Notes** | Findings are automatically recorded with severity levels and actionable recommendations |
-| **Snapshot History** | Key whiteboard states are saved as timestamped snapshots |
+| **Snapshot History** | Key whiteboard states are saved as timestamped snapshots with image upload support |
 | **Session Summary** | Radar chart visualization + Markdown export of the full review |
 
 ---
@@ -41,7 +42,7 @@ Whiteboard architecture sessions are foundational to software development, but t
 <summary>Text-based architecture overview</summary>
 
 ```
-Frontend (Next.js :3000)
+Frontend (Next.js 16 :3000)
   +-- useWebSocket      --> ws://backend/ws/{userId}/{sessionId}
   +-- useAudioCapture   --> PCM16 16kHz --> base64 --> WS
   +-- useVideoCapture   --> JPEG 1fps --> base64 --> WS
@@ -51,14 +52,20 @@ Backend (FastAPI + Google ADK :8080)
   +-- WS /ws/{user_id}/{session_id}
   |     +-- upstream_task   : WS --> LiveRequestQueue --> Gemini Live API
   |     +-- downstream_task : Gemini Live API --> WS
-  |     +-- WhiteboardAnalyzer : Periodic deep analysis (Gemini 3 Flash)
+  |     +-- recovery_task   : Session health monitoring
+  |     +-- perception_task : WhiteboardAnalyzer (Gemini 3.1 Flash Lite)
   +-- ADK Runner
   |     +-- agent.py: architect_agent ("Archie")
   |           +-- tools: save_whiteboard_snapshot, save_review_note,
-  |                      add_annotation, generate_diagram
+  |                      generate_diagram
+  +-- DiagramService    : SVG generation (Gemini 2.0 Flash)
+  +-- TranslationService: English --> Japanese translation
   +-- GET /health
   +-- GET /api/sessions/{id}/notes
   +-- GET /api/sessions/{id}/snapshots
+  +-- GET /api/snapshots/{session_id}/{snapshot_id}.jpg
+  +-- POST /api/sessions/{id}/upload
+  +-- DELETE /api/snapshots/{session_id}/{snapshot_id}
 
 Google Cloud
   +-- Cloud Run     : Backend + Frontend hosting (session affinity)
@@ -79,11 +86,13 @@ Additional diagrams are available in the [`docs/`](./docs/) directory:
 
 | Layer | Technology |
 |---|---|
-| Frontend | Next.js 15 (React 19), Tailwind CSS v4 |
+| Frontend | Next.js 16 (React 19), Tailwind CSS v4 |
 | Backend | Python 3.11+ (FastAPI, Uvicorn) |
 | AI Agent Framework | Google ADK (Agent Development Kit) |
-| AI Model | Gemini 2.5 Flash Native Audio (Live API) |
-| Background Analysis | Gemini 3 Flash Preview |
+| AI Model (Live) | Gemini 2.5 Flash Native Audio (Live API) |
+| AI Model (Analysis) | Gemini 3.1 Flash Lite (Standard API) |
+| AI Model (Diagrams) | Gemini 2.0 Flash (Text) |
+| AI Model (Translation) | Gemini 3.1 Flash Lite |
 | Database | Google Cloud Firestore |
 | Object Storage | Google Cloud Storage |
 | Streaming Protocol | WebSocket (bidirectional) |
@@ -161,6 +170,7 @@ Navigate to `http://localhost:3000` in your browser. Allow camera and microphone
 - The live audio model is pinned to `gemini-2.5-flash-native-audio-preview-09-2025`.
 - On startup, the backend probes configured model candidates and automatically excludes variants that fail the Live API + tool-calling path.
 - Firestore and Cloud Storage are optional -- the app degrades gracefully without them (snapshots and notes are stored in-memory only).
+- The agent speaks English; a translation service provides Japanese translations for bilingual transcript display.
 
 ---
 
@@ -207,10 +217,11 @@ gcloud run deploy whiteboard-architect-backend \
    - Single points of failure
    - Cost optimization opportunities
    - Operational best practices
-5. **Visual annotations** -- Archie highlights specific areas on your whiteboard with visual markers.
-6. **Generate diagrams** -- Ask Archie to "clean up" or "diagram" your whiteboard sketch into a professional technical diagram.
-7. **Review notes** -- Check the Review Notes panel for structured findings with severity levels.
-8. **Export** -- End the session to get a summary with radar chart and Markdown export.
+5. **Visual annotations** -- The system automatically highlights specific areas on your whiteboard with visual markers based on background analysis.
+6. **Generate diagrams** -- Ask Archie to generate a clean diagram from your whiteboard sketch into a professional SVG.
+7. **Upload images** -- Upload existing architecture diagrams for review instead of using the camera.
+8. **Review notes** -- Check the Review Notes panel for structured findings with severity levels.
+9. **Export** -- End the session to get a summary with radar chart and Markdown export.
 
 ---
 
@@ -228,18 +239,25 @@ whiteboard-architect/
 +-- frontend/                    # Next.js frontend application
 |   +-- src/
 |   |   +-- app/                 # Next.js App Router
-|   |   +-- components/          # React components
+|   |   +-- components/          # React components (14 files)
 |   |   |   +-- SessionApp.tsx   #   Main orchestrator
 |   |   |   +-- CameraPreview.tsx#   Camera + annotation overlay
-|   |   |   +-- TranscriptPanel  #   Conversation transcript
+|   |   |   +-- TranscriptPanel  #   Bilingual conversation transcript
 |   |   |   +-- ReviewNotesPanel #   Categorized review notes
-|   |   |   +-- DiagramPanel.tsx #   Generated diagram display
+|   |   |   +-- DiagramPanel.tsx #   Generated diagram display (PiP + modal)
+|   |   |   +-- WhiteboardAnalysisPanel  # Structured analysis display
 |   |   |   +-- SessionSummary   #   Radar chart + export
-|   |   +-- hooks/               # Custom React hooks
+|   |   |   +-- SnapshotGallery  #   Snapshot thumbnails
+|   |   |   +-- SnapshotReviewView #  Single snapshot detailed review
+|   |   |   +-- AnnotationOverlay#   SVG annotation rendering
+|   |   |   +-- ImageUploadZone  #   Image upload UI
+|   |   |   +-- RadarChart       #   Review summary radar chart
+|   |   +-- hooks/               # Custom React hooks (5 files)
 |   |   |   +-- useWebSocket     #   WS + exponential backoff
 |   |   |   +-- useAudioCapture  #   AudioWorklet PCM16 16kHz
 |   |   |   +-- useAudioPlayback #   Gapless PCM + barge-in
 |   |   |   +-- useVideoCapture  #   JPEG capture @ 1fps
+|   |   |   +-- useReducedMotion #   prefers-reduced-motion
 |   |   +-- lib/                 # Utilities and types
 |   +-- public/
 |   +-- Dockerfile
@@ -248,13 +266,17 @@ whiteboard-architect/
 |   +-- main.py                  # FastAPI + WebSocket server
 |   +-- agent.py                 # ADK agent definition (Archie)
 |   +-- config.py                # Environment configuration
+|   +-- whiteboard_state.py      # Structured analysis data models
+|   +-- image_context.py         # Image state management
 |   +-- tools/
-|   |   +-- architect_tools.py   # 4 ADK tools
+|   |   +-- architect_tools.py   # 3 ADK tools (+ 1 auto-generated)
 |   +-- services/
 |   |   +-- firestore_service.py # Firestore persistence
 |   |   +-- storage_service.py   # GCS snapshot storage
-|   |   +-- diagram_service.py   # Diagram generation
-|   |   +-- whiteboard_analyzer.py # Background analysis
+|   |   +-- diagram_service.py   # SVG diagram generation
+|   |   +-- whiteboard_analyzer.py # Background analysis (Perception Layer)
+|   |   +-- translation_service.py # English to Japanese translation
+|   |   +-- live_model_service.py  # Model availability probing
 |   +-- Dockerfile
 |
 +-- infra/                       # Infrastructure as Code
@@ -268,6 +290,10 @@ whiteboard-architect/
     +-- data-flow.svg            # Data flow diagram
     +-- data-flow-sequence.svg   # Sequence diagram
     +-- deployment-pipeline.svg  # Deployment pipeline
+    +-- specification.md         # Technical specification
+    +-- developer-guide.md       # Developer onboarding guide
+    +-- feature-definition.md    # Feature definitions
+    +-- submission.md            # Devpost submission text
 ```
 
 ---
@@ -281,31 +307,143 @@ whiteboard-architect/
 | `audio` | `{type: "audio", data: "<base64>"}` | PCM16 16kHz microphone audio |
 | `video` | `{type: "video", data: "<base64>"}` | JPEG camera frame (1fps) |
 | `text` | `{type: "text", text: "..."}` | Text input |
-| `control` | `{type: "control", action: "save_snapshot"}` | Control commands |
+| `control` | `{type: "control", action: "..."}` | Control commands: `save_snapshot`, `generate_diagram`, `review_snapshot`, `back_to_live` |
 
 ### Server --> Client (`ServerMessage`)
 
 | Type | Payload | Description |
 |---|---|---|
 | `audio` | `{type: "audio", data: "<base64>"}` | PCM 24kHz AI voice |
-| `transcript` | `{type: "transcript", role, text}` | Speech-to-text |
+| `transcript` | `{type: "transcript", role, text}` | Speech-to-text (role: user/agent/thought) |
 | `interrupted` | `{type: "interrupted"}` | Barge-in detected |
 | `turn_complete` | `{type: "turn_complete"}` | AI finished speaking |
 | `tool_call` | `{type: "tool_call", name, result}` | Tool execution result |
 | `annotation` | `{type: "annotation", id, x, y, ...}` | Visual marker (30s auto-expire) |
 | `agent_state` | `{type: "agent_state", mood, trigger}` | Agent emotional state |
-| `diagram` | `{type: "diagram", svg, title}` | Generated diagram |
-| `analysis` | `{type: "analysis", ...}` | Background analysis result |
+| `snapshot_saved` | `{type: "snapshot_saved", ...}` | Snapshot save confirmation |
+| `diagram_generating` | `{type: "diagram_generating", diagram_id}` | Diagram generation started |
+| `diagram_generated` | `{type: "diagram_generated", diagram_id, url}` | Diagram ready |
+| `diagram_error` | `{type: "diagram_error", ...}` | Diagram generation failed |
+| `whiteboard_analysis` | `{type: "whiteboard_analysis", ...}` | Structured analysis result |
+| `error` | `{type: "error", message}` | Error notification |
+
+---
+
+## Reproducible Testing (for Judges)
+
+Follow these steps to test Whiteboard Architect end-to-end on your local machine.
+
+### Prerequisites
+
+| Requirement | Version | Check command |
+|---|---|---|
+| Docker + Docker Compose | Any recent version | `docker --version && docker compose version` |
+| Gemini API Key | -- | Get one free at [Google AI Studio](https://aistudio.google.com/) |
+| Webcam + Microphone | -- | Built-in or external; browser will request permission |
+| Modern browser | Chrome/Edge recommended | Required for AudioWorklet + WebSocket |
+
+> **Note**: No Google Cloud project is required for local testing. Firestore and Cloud Storage degrade gracefully -- the app works fully with just a Gemini API key.
+
+### Step-by-step setup
+
+```bash
+# 1. Clone the repository
+git clone https://github.com/buddypia/whiteboard-architect.git
+cd whiteboard-architect
+
+# 2. Configure environment
+cp .env.example .env
+# Edit .env and set GOOGLE_API_KEY to your Gemini API key:
+#   GOOGLE_API_KEY=AIza...
+
+# 3. Start both services (backend :8080, frontend :3000)
+docker-compose up --build
+```
+
+Wait until you see logs like:
+```
+backend-1   | INFO: Uvicorn running on http://0.0.0.0:8080
+frontend-1  | Ready in Xs
+```
+
+### Verify the backend is running
+
+```bash
+curl http://localhost:8080/health
+# Expected: {"status":"healthy","model":"gemini-2.5-flash-native-audio-preview-09-2025",...}
+```
+
+### Test the full experience
+
+1. Open **http://localhost:3000** in Chrome/Edge.
+2. **Allow camera and microphone** when prompted by the browser.
+3. Click **"Start Session"** to begin.
+4. **Point your camera at a whiteboard** (or any architecture diagram on paper/screen).
+5. **Talk to Archie**: Describe your architecture. For example:
+   - *"This is a three-tier web application with a React frontend, Node.js API, and PostgreSQL database."*
+   - *"Can you review the security of this design?"*
+6. **Observe real-time behavior**:
+   - Archie responds with voice feedback (audio plays through your speaker).
+   - Transcripts appear in the right panel (English + Japanese translation).
+   - Visual annotations (circles, arrows, labels) appear on the camera overlay.
+   - The Whiteboard Analysis panel shows detected components and connections.
+7. **Test barge-in**: Start speaking while Archie is talking -- the AI immediately stops and listens.
+8. **Test tools**:
+   - Say *"Save a snapshot of the current whiteboard"* -- a snapshot appears in the gallery.
+   - Say *"Generate a clean diagram from this"* -- an SVG diagram is generated (takes 3-7s).
+   - Review notes are automatically created and shown in the Review Notes panel.
+9. **Upload an image**: Use the upload zone to review a pre-existing architecture diagram instead of using the camera.
+10. **End the session**: Click "Stop" to see the Session Summary with radar chart and Markdown export.
+
+### Alternative: run without Docker
+
+```bash
+# Terminal 1 - Backend
+cd backend
+pip install -r requirements.txt
+python main.py        # --> http://localhost:8080
+
+# Terminal 2 - Frontend
+cd frontend
+npm install
+npm run dev           # --> http://localhost:3000
+```
+
+### What to expect
+
+| Feature | What you'll see |
+|---|---|
+| Voice conversation | Real-time audio responses from Archie (English) |
+| Camera analysis | Annotations overlaid on the camera preview |
+| Barge-in | Interrupting Archie mid-sentence works naturally |
+| Transcript | Bilingual (English original + Japanese translation) in the right panel |
+| Review Notes | Structured findings with severity badges (critical/warning/info/positive) |
+| Diagram generation | Clean SVG diagram in a floating PiP thumbnail (click to expand) |
+| Whiteboard Analysis | Component/connection/issue detection in the analysis panel |
+| Snapshot gallery | Saved whiteboard states as thumbnails |
+| Session summary | Radar chart + Markdown export at session end |
+
+### Troubleshooting
+
+| Issue | Solution |
+|---|---|
+| No audio from Archie | Check browser audio permissions; ensure speakers/headphones are connected |
+| Camera not detected | Check browser camera permissions; try a different browser |
+| WebSocket disconnects | Refresh the page; the app auto-reconnects with exponential backoff |
+| `health` endpoint shows error | Verify `GOOGLE_API_KEY` is set correctly in `.env` |
+| Docker build fails | Ensure Docker daemon is running; try `docker-compose down && docker-compose up --build` |
 
 ---
 
 ## Lessons Learned
 
-- **Bidirectional streaming with Gemini Live API** -- Implementing bidi-streaming of audio, video, and text over WebSocket required careful design with two parallel async tasks: upstream (client --> Gemini) and downstream (Gemini --> client). Using `LiveRequestQueue` was key to seamlessly multiplexing audio and video frames while receiving AI responses in real-time.
+- **Bidirectional streaming with Gemini Live API** -- Implementing bidi-streaming of audio, video, and text over WebSocket required careful design with four parallel async tasks: upstream (client --> Gemini), downstream (Gemini --> client), recovery (session health monitoring), and perception (background analysis). Using `LiveRequestQueue` was key to seamlessly multiplexing audio and video frames while receiving AI responses in real-time.
 
 - **Native barge-in with ADK** -- The combination of Google ADK and Live API provides native barge-in support without custom code. When the user starts speaking, the AI's audio output is automatically interrupted and an `interrupted` event is sent to the client. On the frontend, immediately clearing the AudioContext buffer delivers a natural interruption experience.
 
-- **Native audio model language handling** -- `gemini-2.5-flash-native-audio-preview` supports Japanese voice I/O, but tends to respond in English unless the system prompt explicitly enforces the target language. Voice recognition accuracy is also affected by speaking speed and ambient noise.
+- **Multi-model architecture** -- Using different Gemini models for different tasks (Live API for conversation, 3.1 Flash Lite for analysis/translation, 2.0 Flash for diagram generation) provided the best balance of capability, speed, and cost.
+
+- **English-first with translation** -- The native audio model produces more reliable and natural responses in English. A translation service provides Japanese translations for bilingual display, offering better quality than forcing Japanese in the system prompt.
 
 - **Graceful degradation** -- Cloud services (Firestore, GCS) are designed to be optional. The app checks availability at startup and falls back to in-memory storage, enabling fully functional local development without any cloud credentials beyond the Gemini API key.
 
