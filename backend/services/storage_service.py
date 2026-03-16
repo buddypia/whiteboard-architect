@@ -2,6 +2,10 @@
 
 Includes a circuit breaker: after consecutive upload failures the service is
 temporarily disabled to avoid spamming a broken GCS endpoint.
+
+Lazy initialization: the GCS client is created on first use rather than at
+import time so that transient metadata-server failures during Cloud Run cold
+starts do not permanently disable the service.
 """
 
 from __future__ import annotations
@@ -22,16 +26,38 @@ class StorageService:
 
     _MAX_CONSECUTIVE_FAILURES = 3
     _CIRCUIT_COOLDOWN_S = 300  # 5 minutes
+    _INIT_RETRY_COOLDOWN_S = 30  # retry init after 30 seconds
 
     def __init__(self, bucket_name: str, project_id: str = "") -> None:
         self._bucket = None
         self._bucket_name = bucket_name
+        self._project_id = project_id
         self._consecutive_failures = 0
         self._circuit_open_until = 0.0
+        self._init_retry_after = 0.0
 
         if not bucket_name:
             logger.info("Cloud Storage disabled: GCS_BUCKET_NAME not set")
+            # Mark so we never retry when no bucket is configured
+            self._init_retry_after = float("inf")
             return
+
+        # Attempt initial connection (best-effort; will retry lazily)
+        self._try_initialize()
+
+    # ------------------------------------------------------------------
+    # Lazy initialisation
+    # ------------------------------------------------------------------
+
+    def _try_initialize(self) -> bool:
+        """Attempt to create the GCS client.  Returns True on success."""
+        if self._bucket is not None:
+            return True
+
+        now = time.monotonic()
+        if now < self._init_retry_after:
+            return False
+
         try:
             from google.auth import default as _default_credentials
             from google.auth.transport.requests import Request as _AuthRequest
@@ -43,24 +69,32 @@ class StorageService:
 
             from google.cloud.storage import Client
 
-            client = Client(project=project_id or None, credentials=credentials)
-            bucket = client.bucket(bucket_name)
+            client = Client(
+                project=self._project_id or None, credentials=credentials
+            )
+            bucket = client.bucket(self._bucket_name)
 
             if not bucket.exists():
                 logger.warning(
-                    "Cloud Storage bucket '%s' does not exist — uploads disabled. "
+                    "Cloud Storage bucket '%s' does not exist — will retry. "
                     "Create the bucket or update GCS_BUCKET_NAME.",
-                    bucket_name,
+                    self._bucket_name,
                 )
-                return
+                self._init_retry_after = now + self._INIT_RETRY_COOLDOWN_S
+                return False
 
             self._bucket = bucket
-            logger.info("Storage client initialized (bucket=%s)", bucket_name)
+            self._init_retry_after = 0.0
+            logger.info("Storage client initialized (bucket=%s)", self._bucket_name)
+            return True
         except Exception as exc:
             logger.warning(
-                "Cloud Storage unavailable - snapshots will not be uploaded: %s",
+                "Cloud Storage init failed (will retry in %ds): %s",
+                self._INIT_RETRY_COOLDOWN_S,
                 exc,
             )
+            self._init_retry_after = now + self._INIT_RETRY_COOLDOWN_S
+            return False
 
     # ------------------------------------------------------------------
     # Circuit breaker
@@ -68,6 +102,8 @@ class StorageService:
 
     @property
     def available(self) -> bool:
+        if self._bucket is None:
+            self._try_initialize()
         if self._bucket is None:
             return False
         if time.monotonic() < self._circuit_open_until:

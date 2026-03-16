@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
 _ANALYSIS_TIMEOUT_S = 30
 
 # --- Structured Output Schema ---
-# Gemini の response_schema に渡して JSON 出力を API レベルで保証する。
+# Passed to Gemini's response_schema to guarantee JSON output at the API level.
 
 
 class _ComponentSchema(TypedDict, total=False):
@@ -62,51 +62,51 @@ class _AnalysisResponseSchema(TypedDict, total=False):
 
 
 # --- Prompts ---
-# JSON フォーマットの指示は response_schema が保証するためプロンプトから除去。
+# JSON format instructions removed from prompt — response_schema guarantees it.
 
 _ANALYSIS_PROMPT = """\
-あなたはシニアクラウドアーキテクトです。添付されたホワイトボードの写真を分析してください。
+You are a senior cloud architect. Analyse the attached whiteboard photo.
 
-ルール:
-- ホワイトボードに何も描かれていない、またはアーキテクチャ図でない場合は has_meaningful_content を false にする。
-- コンポーネントの x, y は画像内の位置を 0.0（左上）〜 1.0（右下）の正規化座標で示す。
-- component_type は service, database, queue, storage, client, load_balancer, cache, api_gateway, network, other のいずれか。
-- connection_type は arrow, bidirectional, dashed のいずれか。
-- issue の category は security, scalability, reliability, cost, operations のいずれか。
-- issue の severity は critical, warning, info のいずれか。
-- 推測でコンポーネントを追加しない。見えるものだけを報告する。
-- issues は明確に問題と判断できるもののみ。不確かな場合は含めない。
+Rules:
+- If the whiteboard is blank or does not contain an architecture diagram, set has_meaningful_content to false.
+- Component x, y represent the position in the image as normalised coordinates from 0.0 (top-left) to 1.0 (bottom-right).
+- component_type must be one of: service, database, queue, storage, client, load_balancer, cache, api_gateway, network, other.
+- connection_type must be one of: arrow, bidirectional, dashed.
+- issue category must be one of: security, scalability, reliability, cost, operations.
+- issue severity must be one of: critical, warning, info.
+- Do not add components by guessing. Only report what is visible.
+- Only include issues that are clearly identifiable problems. If uncertain, do not include them.
 """
 
 _DIFF_PROMPT_TEMPLATE = """\
-添付のホワイトボード写真を分析してください。
+Analyse the attached whiteboard photo.
 
-前回の検出コンポーネント: {previous_components}
-前回の接続: {previous_connections}
+Previously detected components: {previous_components}
+Previous connections: {previous_connections}
 
-変更点を意識して分析し、change_summary に前回からの変更点を記述してください（なければ空文字列）。
+Analyse with awareness of changes and describe what changed from the previous state in change_summary (empty string if no changes).
 
-ルール: 見えるものだけ報告。推測禁止。issues は明確な問題のみ。座標は 0.0-1.0 の正規化座標。
+Rules: Only report what is visible. No guessing. Only include clearly identifiable issues. Coordinates are normalised 0.0-1.0.
 """
 
 
-def _sanitize_api_error(exc: genai_errors.ClientError) -> str:
+def _sanitize_api_error(exc: genai_errors.APIError) -> str:
     """Map API errors to user-safe messages without leaking credentials or internals."""
     status = getattr(exc, "status", None) or ""
     code = getattr(exc, "code", None) or getattr(exc, "status_code", 0)
     msg = str(exc)
 
     if code == 400 or "INVALID_ARGUMENT" in msg:
-        return "ホワイトボード分析: APIパラメータエラー（設定を確認してください）"
+        return "Whiteboard analysis: API parameter error (check configuration)"
     if code == 401 or "UNAUTHENTICATED" in msg:
-        return "ホワイトボード分析: 認証エラー（APIキーを確認してください）"
+        return "Whiteboard analysis: Authentication error (check API key)"
     if code == 403 or "PERMISSION_DENIED" in msg:
-        return "ホワイトボード分析: アクセス権限エラー"
+        return "Whiteboard analysis: Permission denied"
     if code == 429 or "RESOURCE_EXHAUSTED" in msg:
-        return "ホワイトボード分析: APIレート制限に達しました。しばらく待ってから再試行します"
+        return "Whiteboard analysis: API rate limit reached. Retrying shortly"
     if code == 503 or "UNAVAILABLE" in msg:
-        return "ホワイトボード分析: サービスが一時的に利用不可です"
-    return f"ホワイトボード分析: APIエラー（コード {code or status or 'unknown'}）"
+        return "Whiteboard analysis: Service temporarily unavailable"
+    return f"Whiteboard analysis: API error (code {code or status or 'unknown'})"
 
 
 class WhiteboardAnalyzer:
@@ -160,10 +160,10 @@ class WhiteboardAnalyzer:
             if previous_state and previous_state.has_meaningful_content:
                 prev_comps = ", ".join(
                     f"{c.name}({c.component_type})" for c in previous_state.components
-                ) or "なし"
+                ) or "none"
                 prev_conns = ", ".join(
                     f"{c.source}→{c.target}" for c in previous_state.connections
-                ) or "なし"
+                ) or "none"
                 prompt = _DIFF_PROMPT_TEMPLATE.format(
                     previous_components=prev_comps,
                     previous_connections=prev_conns,
@@ -179,8 +179,8 @@ class WhiteboardAnalyzer:
                 "response_schema": _AnalysisResponseSchema,
                 "temperature": 0.1,
             }
-            # thinking_budget と thinking_level は排他（API制約）。
-            # budget > 0 を優先し、budget == 0 かつ level 指定時のみ level を使用。
+            # thinking_budget and thinking_level are mutually exclusive (API constraint).
+            # Prefer budget > 0; only use level when budget == 0 and level is specified.
             if config.analysis_thinking_budget > 0:
                 generation_config["thinking_config"] = types.ThinkingConfig(
                     thinking_budget=config.analysis_thinking_budget,
@@ -237,14 +237,14 @@ class WhiteboardAnalyzer:
         except asyncio.TimeoutError:
             logger.error("Whiteboard analysis timed out after %ds", _ANALYSIS_TIMEOUT_S)
             return WhiteboardState.empty(
-                error=f"ホワイトボード分析がタイムアウトしました（{_ANALYSIS_TIMEOUT_S}秒）"
+                error=f"Whiteboard analysis timed out ({_ANALYSIS_TIMEOUT_S}s)"
             )
         except json.JSONDecodeError as exc:
             logger.error("Failed to parse analysis JSON: %s", exc)
             return WhiteboardState.empty(
-                error="ホワイトボード分析結果の解析に失敗しました"
+                error="Failed to parse whiteboard analysis result"
             )
-        except genai_errors.ClientError as exc:
+        except genai_errors.APIError as exc:
             logger.error("Whiteboard analysis API error: %s", exc, exc_info=True)
             return WhiteboardState.empty(
                 error=_sanitize_api_error(exc),
@@ -252,5 +252,5 @@ class WhiteboardAnalyzer:
         except Exception as exc:
             logger.error("Whiteboard analysis failed: %s", exc, exc_info=True)
             return WhiteboardState.empty(
-                error="ホワイトボード分析で予期しないエラーが発生しました"
+                error="Unexpected error during whiteboard analysis"
             )

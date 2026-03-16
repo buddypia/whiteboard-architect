@@ -38,6 +38,10 @@ from whiteboard_state import WhiteboardState
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+    handlers=[
+        logging.StreamHandler(),
+        logging.FileHandler("debug.log")
+    ]
 )
 logger = logging.getLogger(__name__)
 
@@ -223,15 +227,35 @@ async def serve_snapshot(session_id: str, snapshot_id: str) -> Response:
     local_path = SNAPSHOT_DIR / session_id / f"{snapshot_id}.jpg"
     if local_path.exists():
         data = await asyncio.to_thread(local_path.read_bytes)
-        return Response(content=data, media_type="image/jpeg")
+        return Response(
+            content=data,
+            media_type="image/jpeg",
+            headers={"Cache-Control": "public, max-age=86400"},
+        )
 
     # GCS fallback — download and cache locally
     data = await storage_service.download_snapshot(session_id, snapshot_id)
     if data:
         local_path.parent.mkdir(parents=True, exist_ok=True)
         await asyncio.to_thread(local_path.write_bytes, data)
-        return Response(content=data, media_type="image/jpeg")
+        logger.info(
+            "Served snapshot from GCS (local cache miss): %s/%s",
+            session_id,
+            snapshot_id,
+        )
+        return Response(
+            content=data,
+            media_type="image/jpeg",
+            headers={"Cache-Control": "public, max-age=86400"},
+        )
 
+    logger.warning(
+        "Snapshot not found: %s/%s (local_exists=%s, gcs_available=%s)",
+        session_id,
+        snapshot_id,
+        local_path.exists(),
+        storage_service.available,
+    )
     raise HTTPException(status_code=404, detail="Snapshot not found")
 
 
@@ -272,7 +296,7 @@ async def upload_image(session_id: str, file: UploadFile = File(...)) -> dict:
         image_data = buf.getvalue()
 
     upload_id = str(uuid.uuid4())[:8]
-    description = "アップロード画像"
+    description = "Uploaded image"
 
     await _save_snapshot_locally(session_id, upload_id, image_data, description, origin="upload")
 
@@ -354,19 +378,9 @@ def _build_run_config() -> RunConfig:
         response_modalities=["AUDIO"],
         output_audio_transcription=types.AudioTranscriptionConfig(),
         input_audio_transcription=types.AudioTranscriptionConfig(),
-        realtime_input_config=types.RealtimeInputConfig(
-            activity_handling=types.ActivityHandling.START_OF_ACTIVITY_INTERRUPTS,
-            automatic_activity_detection=types.AutomaticActivityDetection(
-                # LOW sensitivity: Gemini requires louder/clearer speech to
-                # trigger barge-in.  Prevents ambient noise, echo, and
-                # keyboard sounds from falsely interrupting the agent.
-                # All other parameters (end sensitivity, silence duration)
-                # are left at defaults — overriding them can prevent the
-                # model from responding when the client sends continuous
-                # audio frames (including silence/ambient noise).
-                start_of_speech_sensitivity=types.StartSensitivity.START_SENSITIVITY_LOW,
-            ),
-        ),
+        # Removing realtime_input_config disables automatic barge-in interruptions,
+        # ensuring Archie always finishes speaking unless explicitly interrupted by the client.
+        # This fixes the issue of Archie stopping abruptly after 1-2 seconds.
     )
 
 
@@ -544,7 +558,7 @@ async def websocket_endpoint(
     agent_idle.set()
     # Cooldown after turn_complete: the frontend may still be playing queued audio,
     # so block perception-layer prompts for a grace period after each turn ends.
-    POST_TURN_COOLDOWN_S = 5.0
+    POST_TURN_COOLDOWN_S = 15.0
     last_turn_end_time = [0.0]
     emitted_terminal_turn_keys: list[str] = []
     emitted_terminal_turn_key_set: set[str] = set()
@@ -662,9 +676,9 @@ async def websocket_endpoint(
                         types.Content(
                             parts=[types.Part.from_text(
                                 text=(
-                                    "[システム通知] ユーザーが割り込みかけましたが、"
-                                    "発話が確認できませんでした。"
-                                    "先ほどの説明を自然に再開してください。"
+                                    "[System Notice] The user attempted to interrupt, "
+                                    "but no speech was detected. "
+                                    "Please naturally resume your previous explanation."
                                 )
                             )],
                             role="user",
@@ -818,27 +832,28 @@ async def websocket_endpoint(
                         )
 
                 # Inject context into live agent ONLY on significant changes
-                if (
-                    new_state.is_significantly_different(prev_state)
-                    and agent_idle.is_set()
-                    and (time.monotonic() - last_turn_end_time[0]) >= POST_TURN_COOLDOWN_S
-                ):
-                    context_text = new_state.to_context_summary()
-                    change_desc = new_state.change_summary or "ホワイトボードの内容が更新されました"
+                if new_state.is_significantly_different(prev_state):
+                    if not agent_idle.is_set():
+                        logger.info("Significant whiteboard change detected, but agent is busy (agent_idle is False). Skipping context injection.")
+                    elif (time.monotonic() - last_turn_end_time[0]) < POST_TURN_COOLDOWN_S:
+                        logger.info("Significant whiteboard change detected, but in post-turn cooldown. Skipping context injection.")
+                    else:
+                        context_text = new_state.to_context_summary()
+                        change_desc = new_state.change_summary or "The whiteboard content has been updated"
 
-                    agent_idle.clear()
-                    logger.info("Significant whiteboard change detected — injecting context")
-                    live_request_queue.send_content(
-                        types.Content(
-                            parts=[types.Part.from_text(text=(
-                                f"[バックグラウンド分析結果] {change_desc}\n\n"
-                                f"{context_text}\n\n"
-                                "上記の分析結果を踏まえて、変更点や気になるポイントがあれば簡潔にコメントしてください。"
-                                "変化が軽微であれば無理にコメントする必要はありません。"
-                            ))],
-                            role="user",
+                        agent_idle.clear()
+                        logger.info("Significant whiteboard change detected — injecting context")
+                        live_request_queue.send_content(
+                            types.Content(
+                                parts=[types.Part.from_text(text=(
+                                    f"[Background Analysis Results] {change_desc}\n\n"
+                                    f"{context_text}\n\n"
+                                    "Based on the analysis above, briefly comment on any changes or concerns you notice. "
+                                    "If the changes are minor, there is no need to comment."
+                                ))],
+                                role="user",
+                            )
                         )
-                    )
 
         except asyncio.CancelledError:
             logger.info("Perception task cancelled")
@@ -857,12 +872,19 @@ async def websocket_endpoint(
 
                 if msg_type == "audio":
                     last_upstream_audio_time[0] = time.monotonic()
-                    # Gate: drop ambient audio while agent is responding.
-                    # Only forward when agent is idle OR frontend confirmed
-                    # barge-in (user is actually speaking).
-                    if not agent_idle.is_set() and not barge_in_override[0]:
-                        continue
                     audio_bytes = base64.b64decode(msg["data"])
+                    if not agent_idle.is_set() and not barge_in_override[0]:
+                        # Gate: replace ambient audio with silence while agent is responding.
+                        # We must send silence instead of dropping, because Gemini
+                        # requires a continuous audio stream for VAD to work properly.
+                        # DEBUG: log when audio is zeroed out vs passed through
+                        logger.debug("upstream_task - Agent responding, blocking ambient audio (zeroing out %d bytes)", len(audio_bytes))
+                        audio_bytes = b'\x00' * len(audio_bytes)
+                    elif not agent_idle.is_set() and barge_in_override[0]:
+                        logger.debug("upstream_task - Barge-in override active, passing user audio (%d bytes)", len(audio_bytes))
+                    else:
+                        logger.debug("upstream_task - Agent idle, passing user audio (%d bytes)", len(audio_bytes))
+
                     live_request_queue.send_realtime(
                         blob=types.Blob(
                             data=audio_bytes, mime_type="audio/pcm"
@@ -888,9 +910,9 @@ async def websocket_endpoint(
                             types.Content(
                                 parts=[types.Part.from_text(
                                     text=(
-                                        "セッションが開始されました。"
-                                        "ユーザーに簡潔に挨拶し、"
-                                        "ホワイトボードを見せてもらうよう促してください。"
+                                        "The session has started. "
+                                        "Greet the user briefly and "
+                                        "ask them to show their whiteboard."
                                     )
                                 )],
                                 role="user",
@@ -930,12 +952,12 @@ async def websocket_endpoint(
                         if not img_ctx.has_image:
                             await _ws_send(websocket, {
                                 "type": "diagram_error",
-                                "message": "表示中の画像がありません。カメラを有効にするか、スナップショットを選択してください。",
+                                "message": "No image available. Please enable the camera or select a snapshot.",
                             })
                         elif not diagram_generating.is_set():
                             await _ws_send(websocket, {
                                 "type": "diagram_error",
-                                "message": "図解を生成中です。完了までお待ちください。",
+                                "message": "Diagram generation in progress. Please wait.",
                             })
                         else:
                             diagram_generating.clear()
@@ -951,7 +973,17 @@ async def websocket_endpoint(
                     elif action == "review_snapshot":
                         snapshot_id = msg.get("snapshotId", "")
                         source_hint = msg.get("origin", "snapshot")
-                        if snapshot_id and _SAFE_ID_RE.match(snapshot_id):
+                        if not snapshot_id or not _SAFE_ID_RE.match(snapshot_id):
+                            logger.warning(
+                                "Invalid snapshot_id for review: %r", snapshot_id,
+                            )
+                            await _ws_send(websocket, {
+                                "type": "error",
+                                "code": "INVALID_SNAPSHOT_ID",
+                                "message": "Invalid snapshot ID.",
+                                "retryable": True,
+                            })
+                        else:
                             local_path = SNAPSHOT_DIR / session_id / f"{snapshot_id}.jpg"
                             image_data = None
                             if local_path.exists():
@@ -960,7 +992,18 @@ async def websocket_endpoint(
                                 image_data = await storage_service.download_snapshot(
                                     session_id, snapshot_id
                                 )
-                            if image_data:
+                            if not image_data:
+                                logger.warning(
+                                    "Snapshot image not found for review: %s/%s",
+                                    session_id, snapshot_id,
+                                )
+                                await _ws_send(websocket, {
+                                    "type": "error",
+                                    "code": "SNAPSHOT_NOT_FOUND",
+                                    "message": f"Snapshot image not found (ID: {snapshot_id[:8]}...). Please save it again and retry.",
+                                    "retryable": True,
+                                })
+                            else:
                                 img_source = (
                                     ImageSource.UPLOAD
                                     if source_hint == "upload"
@@ -974,16 +1017,16 @@ async def websocket_endpoint(
                                     )
                                 )
                                 prompt = (
-                                    "ユーザーがホワイトボードの画像をアップロードしました。"
+                                    "The user has uploaded a whiteboard image."
                                     if source_hint == "upload"
-                                    else "ユーザーが過去に保存したスナップショットを選択して詳しいレビューを依頼しています。"
+                                    else "The user has selected a previously saved snapshot and is requesting a detailed review."
                                 )
                                 live_request_queue.send_content(
                                     types.Content(
                                         parts=[types.Part.from_text(text=(
-                                            f"{prompt}"
-                                            "直前に送信した画像（ホワイトボードのスナップショット）を詳しく分析してください。"
-                                            "描かれているアーキテクチャの構成要素、データフロー、強みと弱みを具体的に説明してください。"
+                                            f"{prompt} "
+                                            "Please provide a brief overview comment in 2-3 sentences about the image (whiteboard snapshot) just sent. "
+                                            "Detailed analysis will follow through conversation with the user."
                                         ))],
                                         role="user",
                                     )
@@ -1050,8 +1093,8 @@ async def websocket_endpoint(
                                 "type": "error",
                                 "code": _extract_gemini_error_code(exc),
                                 "message": (
-                                    "Gemini Live の未対応エラーを検出したため、"
-                                    f"モデルを {previous_model} から {active_model_name} に切り替えて再接続します。"
+                                    "Detected an unsupported Gemini Live error. "
+                                    f"Switching model from {previous_model} to {active_model_name} and reconnecting."
                                 ),
                                 "retryable": True,
                             },
@@ -1095,7 +1138,7 @@ async def websocket_endpoint(
                             "type": "error",
                             "code": _extract_gemini_error_code(exc),
                             "message": (
-                                f"Gemini Live 接続エラーのため再試行します "
+                                f"Retrying due to Gemini Live connection error "
                                 f"({retries}/{_MAX_GEMINI_RETRIES}, model={active_model_name}): "
                                 f"{exc_str[:150]}"
                             ),
@@ -1155,6 +1198,7 @@ async def websocket_endpoint(
                 # Send interrupted signal BEFORE processing parts so the
                 # frontend can stop playback before any stale audio arrives.
                 if is_interrupted:
+                    logger.debug(f"[DEBUG] downstream_task - Received interrupted=True from Gemini! turn_id={turn_id}")
                     await _emit_terminal_turn_signal(
                         "interrupted",
                         turn_id,
@@ -1189,6 +1233,8 @@ async def websocket_endpoint(
                             }
                             if turn_id:
                                 payload["turnId"] = turn_id
+                            
+                            logger.debug("Sending audio chunk for turn=%s, len=%d", turn_id, len(audio_b64))
                             await _ws_send(websocket, payload)
 
                     # Model thinking parts — skip sending to client
@@ -1196,7 +1242,10 @@ async def websocket_endpoint(
                         pass
 
                     elif part.text:
-                        role = event.author or "agent"
+                        # ADK sets event.author to the agent name (e.g. "archie").
+                        # Normalize to "user" or "agent" for the frontend protocol.
+                        raw_role = event.author or "agent"
+                        role = "user" if raw_role == "user" else "agent"
                         await _ws_send(
                             websocket,
                             {
@@ -1249,7 +1298,7 @@ async def websocket_endpoint(
                             if not img_ctx.has_image:
                                 await _ws_send(websocket, {
                                     "type": "diagram_error",
-                                    "message": "表示中の画像がありません。",
+                                    "message": "No image currently displayed.",
                                 })
                             elif not diagram_generating.is_set():
                                 pass  # Already generating — skip duplicate
@@ -1263,7 +1312,7 @@ async def websocket_endpoint(
                                         diagram_generating,
                                     )
                                 )
-                        # Save snapshot image locally and notify frontend
+                        # Save snapshot image locally + GCS, then notify frontend
                         if (
                             part.function_response.name == "save_whiteboard_snapshot"
                             and resp.get("status") == "saved"
@@ -1274,6 +1323,14 @@ async def websocket_endpoint(
                             await _save_snapshot_locally(
                                 session_id, snap_id, img_ctx.active_image, snap_desc,
                             )
+                            # Upload to GCS BEFORE notifying frontend so the
+                            # image is retrievable even if this container dies.
+                            if storage_service.available:
+                                await storage_service.upload_snapshot(
+                                    session_id=session_id,
+                                    snapshot_id=snap_id,
+                                    image_data=img_ctx.active_image,
+                                )
                             await _ws_send(
                                 websocket,
                                 {
@@ -1310,7 +1367,7 @@ async def websocket_endpoint(
                     "type": "error",
                     "code": _extract_gemini_error_code(exc),
                     "message": (
-                        f"Gemini Live API 接続エラーが発生しました "
+                        f"Gemini Live API connection error "
                         f"(model={active_model_name}): {exc_str[:200]}"
                     ),
                     "retryable": False,
@@ -1549,7 +1606,7 @@ async def _handle_diagram_generation(
                 websocket,
                 {
                     "type": "diagram_error",
-                    "message": error_text or "図解の生成に失敗しました。",
+                    "message": error_text or "Failed to generate diagram.",
                 },
             )
     except asyncio.CancelledError:
@@ -1560,7 +1617,7 @@ async def _handle_diagram_generation(
             websocket,
             {
                 "type": "diagram_error",
-                "message": f"図解の生成中にエラーが発生しました: {str(exc)[:200]}",
+                "message": f"Error during diagram generation: {str(exc)[:200]}",
             },
         )
     finally:
@@ -1609,14 +1666,8 @@ async def _persist_session_data(
         try:
             if name == "save_whiteboard_snapshot" and result.get("status") == "saved":
                 snapshot_id = result.get("snapshot_id", uuid.uuid4().hex[:8])
-                # GCS upload (circuit breaker handles failures internally)
-                if storage_service.available and img_ctx.has_image:
-                    await storage_service.upload_snapshot(
-                        session_id=session_id,
-                        snapshot_id=snapshot_id,
-                        image_data=img_ctx.active_image,
-                    )
-                # Always store the stable canonical URL
+                # GCS upload already done in downstream_task before
+                # snapshot_saved notification — only persist Firestore metadata.
                 await firestore_service.save_snapshot_metadata(
                     session_id=session_id,
                     snapshot_id=snapshot_id,
