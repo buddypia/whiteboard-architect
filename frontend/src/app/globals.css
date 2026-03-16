@@ -1,0 +1,649 @@
+@import "tailwindcss";
+
+/* ============================================
+   Design System — Whiteboard Architect
+   Brand: Emerald #10b981
+   Theme: Dark-first, tech-forward, calm
+   ============================================ */
+
+:root {
+  color-scheme: dark;
+
+  /* --- Brand Scale (Emerald) --- */
+  --brand-50: #ecfdf5;
+  --brand-100: #d1fae5;
+  --brand-200: #a7f3d0;
+  --brand-300: #6ee7b7;
+  --brand-400: #34d399;
+  --brand-500: #10b981;
+  --brand-600: #059669;
+  --brand-700: #047857;
+  --brand-800: #065f46;
+  --brand-900: #064e3b;
+  --brand-950: #022c22;
+
+  /* --- Semantic Tokens (Dark Mode) --- */
+  --background: #06080d;
+  --background-secondary: #0c1017;
+  --foreground: #e2e8f0;
+  --foreground-muted: #94a3b8;
+  --foreground-subtle: #8b9cb7;
+
+  --surface: #111827;
+  --surface-hover: #1e293b;
+  --surface-active: #1e293b;
+  --surface-raised: #1a2332;
+
+  --border: #1e293b;
+  --border-subtle: #162032;
+  --border-accent: var(--brand-500);
+
+  --accent: var(--brand-500);
+  --accent-hover: var(--brand-400);
+  --accent-muted: rgb(16 185 129 / 0.15);
+
+  --overlay: rgb(0 0 0 / 0.6);
+  --overlay-heavy: rgb(0 0 0 / 0.7);
+  --on-accent: #ffffff;
+  --diagram-bg: #ffffff;
+
+  --destructive: #ef4444;
+  --destructive-hover: #dc2626;
+  --warning: #f59e0b;
+  --info: #3b82f6;
+  --positive: var(--brand-500);
+
+  /* --- Shadows --- */
+  --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.3);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.4), 0 2px 4px -2px rgb(0 0 0 / 0.3);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.5), 0 4px 6px -4px rgb(0 0 0 / 0.4);
+  --shadow-glow: 0 0 20px rgb(16 185 129 / 0.15);
+
+  /* --- Radius --- */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 20px;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-inter);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans), system-ui, -apple-system, sans-serif;
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* ============================================
+   Focus States (WCAG compliant)
+   ============================================ */
+:focus-visible {
+  outline: 2px solid var(--brand-400);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+button:focus-visible,
+a:focus-visible {
+  outline: 2px solid var(--brand-400);
+  outline-offset: 2px;
+}
+
+/* ============================================
+   Scrollbar
+   ============================================ */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 9999px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: var(--foreground-subtle);
+}
+
+/* Firefox scrollbar */
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+
+/* ============================================
+   Animations & Keyframes
+   ============================================ */
+
+/* Fade in */
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.3s ease-out;
+}
+
+/* Slide up (for chat messages) */
+@keyframes slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-slide-up {
+  animation: slide-up 0.25s ease-out;
+}
+
+/* Slide in right (for toasts) */
+@keyframes slide-in-right {
+  from {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.animate-slide-in-right {
+  animation: slide-in-right 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Slide out right (for toast dismiss) */
+@keyframes slide-out-right {
+  from {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+}
+
+/* Breathing glow (for active camera) */
+@keyframes breathing-glow {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgb(16 185 129 / 0), 0 0 0 1px rgb(16 185 129 / 0.2);
+  }
+  50% {
+    box-shadow: 0 0 16px 2px rgb(16 185 129 / 0.15), 0 0 0 1px rgb(16 185 129 / 0.35);
+  }
+}
+
+.animate-breathing-glow {
+  animation: breathing-glow 2.5s ease-in-out infinite;
+}
+
+/* Active ring animation for camera preview */
+@keyframes active-ring {
+  0%, 100% {
+    opacity: 0.3;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.6;
+    transform: scale(1.003);
+  }
+}
+
+.animate-active-ring {
+  animation: active-ring 2s ease-in-out infinite;
+}
+
+/* Audio wave pulse */
+@keyframes wave-pulse {
+  0%, 100% { transform: scaleY(0.4); }
+  50% { transform: scaleY(1); }
+}
+
+/* Dot pulse (for status indicators) */
+@keyframes dot-pulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.5;
+    transform: scale(0.85);
+  }
+}
+
+.animate-dot-pulse {
+  animation: dot-pulse 1.5s ease-in-out infinite;
+}
+
+/* Gentle pulse for CTA */
+@keyframes gentle-pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgb(16 185 129 / 0.4);
+  }
+  50% {
+    box-shadow: 0 0 0 8px rgb(16 185 129 / 0);
+  }
+}
+
+.animate-gentle-pulse {
+  animation: gentle-pulse 2s ease-in-out infinite;
+}
+
+/* Annotation appear */
+@keyframes annotation-in {
+  from { opacity: 0; transform: scale(0.5); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.animate-annotation-in {
+  animation: annotation-in 0.3s ease-out;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+/* Thinking dots (agent processing indicator) */
+@keyframes thinking-dot {
+  0%, 60%, 100% {
+    opacity: 0.3;
+    transform: translateY(0);
+  }
+  30% {
+    opacity: 1;
+    transform: translateY(-3px);
+  }
+}
+
+.thinking-dots span:nth-child(1) { animation: thinking-dot 1.4s ease-in-out infinite; }
+.thinking-dots span:nth-child(2) { animation: thinking-dot 1.4s ease-in-out 0.2s infinite; }
+.thinking-dots span:nth-child(3) { animation: thinking-dot 1.4s ease-in-out 0.4s infinite; }
+
+/* Subtle breathing glow (for waiting state) */
+@keyframes breathing-glow-subtle {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgb(16 185 129 / 0);
+    border-color: rgb(16 185 129 / 0.3);
+  }
+  50% {
+    box-shadow: 0 0 12px 2px rgb(16 185 129 / 0.1);
+    border-color: rgb(16 185 129 / 0.5);
+  }
+}
+
+.animate-breathing-glow-subtle {
+  animation: breathing-glow-subtle 2s ease-in-out infinite;
+}
+
+/* Spin animation */
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+
+/* ============================================
+   Reduced Motion
+   ============================================ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ============================================
+   Glassmorphism utility
+   ============================================ */
+.glass {
+  background: rgb(17 24 39 / 0.7);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+/* ============================================
+   Audio wave bars
+   ============================================ */
+.audio-wave {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  height: 16px;
+}
+
+.audio-wave span {
+  display: block;
+  width: 2px;
+  background: currentColor;
+  border-radius: 9999px;
+  animation: wave-pulse 1.2s ease-in-out infinite;
+}
+
+.audio-wave span:nth-child(1) { animation-delay: 0s; height: 40%; }
+.audio-wave span:nth-child(2) { animation-delay: 0.15s; height: 70%; }
+.audio-wave span:nth-child(3) { animation-delay: 0.3s; height: 100%; }
+.audio-wave span:nth-child(4) { animation-delay: 0.45s; height: 60%; }
+
+/* ============================================
+   Scanning corners for camera
+   ============================================ */
+.scan-corners {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.scan-corners::before,
+.scan-corners::after,
+.scan-corner-bl::before,
+.scan-corner-br::before {
+  content: "";
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  border-color: var(--brand-400);
+  border-style: solid;
+  border-width: 0;
+  opacity: 0.6;
+}
+
+.scan-corners::before {
+  top: 6px;
+  left: 6px;
+  border-top-width: 2px;
+  border-left-width: 2px;
+  border-top-left-radius: 4px;
+}
+
+.scan-corners::after {
+  top: 6px;
+  right: 6px;
+  border-top-width: 2px;
+  border-right-width: 2px;
+  border-top-right-radius: 4px;
+}
+
+.scan-corner-bl::before {
+  bottom: 6px;
+  left: 6px;
+  border-bottom-width: 2px;
+  border-left-width: 2px;
+  border-bottom-left-radius: 4px;
+}
+
+.scan-corner-br::before {
+  bottom: 6px;
+  right: 6px;
+  border-bottom-width: 2px;
+  border-right-width: 2px;
+  border-bottom-right-radius: 4px;
+}
+
+/* ============================================
+   Spotlight pulse (speech-linked annotations)
+   ============================================ */
+@keyframes spotlight-pulse {
+  0%, 100% {
+    opacity: 0.4;
+    stroke-width: 0.3;
+  }
+  50% {
+    opacity: 0.15;
+    stroke-width: 0.6;
+  }
+}
+
+.spotlight-pulse {
+  animation: spotlight-pulse 2s ease-in-out infinite;
+}
+
+/* ============================================
+   Mood bounce (agent mood indicator)
+   ============================================ */
+@keyframes mood-bounce {
+  0%, 100% { transform: translateY(0); }
+  25% { transform: translateY(-3px); }
+  50% { transform: translateY(0); }
+  75% { transform: translateY(-1.5px); }
+}
+
+.mood-bounce {
+  animation: mood-bounce 0.6s ease-out;
+}
+
+/* ============================================
+   Barge-in flash (interruption visual feedback)
+   ============================================ */
+@keyframes barge-in-flash {
+  0% {
+    background: rgb(245 158 11 / 0.25);
+  }
+  50% {
+    background: rgb(245 158 11 / 0);
+  }
+  100% {
+    background: rgb(245 158 11 / 0.15);
+  }
+}
+
+.barge-in-flash {
+  animation: barge-in-flash 0.4s ease-out 2;
+}
+
+/* ============================================
+   Annotation expiry progress bar
+   ============================================ */
+@keyframes annotation-expire {
+  from { transform: scaleX(1); }
+  to { transform: scaleX(0); }
+}
+
+.annotation-expire-bar {
+  transform-origin: left;
+  animation: annotation-expire var(--expire-duration, 30s) linear forwards;
+}
+
+/* Slide down for annotation panel */
+@keyframes slide-down-in {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-slide-down-in {
+  animation: slide-down-in 0.25s ease-out;
+}
+
+/* ============================================
+   Snapshot Review Mode
+   ============================================ */
+
+@keyframes snapshot-expand {
+  from {
+    opacity: 0;
+    transform: scale(0.85);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.animate-snapshot-expand {
+  animation: snapshot-expand 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes review-glow {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgb(59 130 246 / 0), 0 0 0 1px rgb(59 130 246 / 0.2);
+  }
+  50% {
+    box-shadow: 0 0 16px 2px rgb(59 130 246 / 0.15), 0 0 0 1px rgb(59 130 246 / 0.35);
+  }
+}
+
+.animate-review-glow {
+  animation: review-glow 2.5s ease-in-out infinite;
+}
+
+/* ============================================
+   Diagram PiP
+   ============================================ */
+@keyframes diagram-pip-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.diagram-pip-in {
+  animation: diagram-pip-in 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes diagram-expand-in {
+  from {
+    opacity: 0;
+    transform: scale(0.85);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.diagram-expand-in {
+  animation: diagram-expand-in 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* ============================================
+   Agent Review Scan Line
+   ============================================ */
+@keyframes review-scan {
+  0% {
+    top: -2px;
+    opacity: 0;
+  }
+  5% {
+    opacity: 1;
+  }
+  95% {
+    opacity: 1;
+  }
+  100% {
+    top: calc(100% - 2px);
+    opacity: 0;
+  }
+}
+
+.review-scan-line {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    var(--brand-400) 20%,
+    var(--brand-300) 50%,
+    var(--brand-400) 80%,
+    transparent 100%
+  );
+  box-shadow: 0 0 8px 2px var(--accent-muted);
+  animation: review-scan 3s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 30;
+}
+
+@keyframes review-border-pulse {
+  0%, 100% {
+    border-color: var(--brand-400);
+    box-shadow: 0 0 12px 1px var(--accent-muted);
+  }
+  50% {
+    border-color: var(--brand-300);
+    box-shadow: 0 0 20px 3px var(--accent-muted);
+  }
+}
+
+.review-border-pulse {
+  animation: review-border-pulse 2s ease-in-out infinite;
+}
+
+@keyframes activity-badge-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.animate-activity-badge-in {
+  animation: activity-badge-in 0.25s ease-out;
+}
+
+/* ============================================
+   Transcript Markdown — strong as section heading
+   ============================================ */
+.transcript-markdown p {
+  margin: 0.25em 0;
+}
+
+.transcript-markdown strong {
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--brand-300);
+  letter-spacing: 0.02em;
+  margin-top: 0.75em;
+  padding-bottom: 0.3em;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.transcript-markdown p:first-child > strong:first-child {
+  margin-top: 0;
+}
+
+/* Thought bubble variant — smaller heading, still visually distinct */
+.transcript-markdown-thought strong {
+  font-size: 0.7rem;
+  color: var(--brand-400);
+  margin-top: 0.5em;
+  padding-bottom: 0.2em;
+  border-bottom: 1px dashed var(--border-subtle);
+}

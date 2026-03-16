@@ -1,0 +1,154 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 620" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="13">
+  <defs>
+    <marker id="arrow" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L8,3 L0,6" fill="#555"/>
+    </marker>
+    <marker id="arrow-blue" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L8,3 L0,6" fill="#1a73e8"/>
+    </marker>
+    <marker id="arrow-green" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L8,3 L0,6" fill="#0d652d"/>
+    </marker>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1100" height="620" fill="#fff"/>
+
+  <!-- Title -->
+  <text x="550" y="32" text-anchor="middle" font-size="20" font-weight="bold" fill="#202124">Whiteboard Architect — System Architecture</text>
+
+  <!-- User -->
+  <rect x="30" y="200" width="150" height="220" rx="12" fill="#e8f0fe" stroke="#1a73e8" stroke-width="1.5"/>
+  <text x="105" y="225" text-anchor="middle" font-weight="bold" fill="#1a73e8" font-size="14">User (Browser)</text>
+  <line x1="50" y1="235" x2="160" y2="235" stroke="#1a73e8" stroke-width="0.5"/>
+  <!-- icons as text -->
+  <text x="58" y="265" font-size="22">📷</text>
+  <text x="85" y="266" fill="#333">Camera</text>
+  <text x="58" y="300" font-size="22">🎤</text>
+  <text x="85" y="301" fill="#333">Microphone</text>
+  <text x="58" y="335" font-size="22">🔊</text>
+  <text x="85" y="336" fill="#333">Speaker</text>
+  <text x="58" y="370" font-size="22">🖥️</text>
+  <text x="85" y="371" fill="#333">UI Controls</text>
+  <text x="58" y="405" font-size="22">📝</text>
+  <text x="85" y="406" fill="#333">Transcripts</text>
+
+  <!-- Cloud Run boundary -->
+  <rect x="230" y="60" width="540" height="530" rx="14" fill="#f8f9fa" stroke="#dadce0" stroke-width="1.5" stroke-dasharray="6,3"/>
+  <text x="500" y="88" text-anchor="middle" font-size="15" font-weight="bold" fill="#5f6368">Google Cloud Run</text>
+
+  <!-- Frontend -->
+  <rect x="260" y="110" width="200" height="190" rx="10" fill="#e8f0fe" stroke="#1a73e8" stroke-width="1.5"/>
+  <text x="360" y="135" text-anchor="middle" font-weight="bold" fill="#1a73e8" font-size="14">Frontend</text>
+  <text x="360" y="155" text-anchor="middle" fill="#5f6368" font-size="11">Next.js :3000</text>
+  <line x1="275" y1="165" x2="445" y2="165" stroke="#1a73e8" stroke-width="0.5"/>
+  <text x="275" y="185" fill="#333" font-size="12">useWebSocket</text>
+  <text x="275" y="205" fill="#333" font-size="12">useAudioCapture</text>
+  <text x="275" y="225" fill="#333" font-size="12">useAudioPlayback</text>
+  <text x="275" y="245" fill="#333" font-size="12">useVideoCapture</text>
+  <text x="275" y="265" fill="#333" font-size="12">SessionApp</text>
+
+  <!-- Backend -->
+  <rect x="260" y="340" width="480" height="230" rx="10" fill="#fce8e6" stroke="#d93025" stroke-width="1.5"/>
+  <text x="500" y="365" text-anchor="middle" font-weight="bold" fill="#d93025" font-size="14">Backend</text>
+  <text x="500" y="385" text-anchor="middle" fill="#5f6368" font-size="11">FastAPI + Google ADK :8080</text>
+  <line x1="275" y1="395" x2="725" y2="395" stroke="#d93025" stroke-width="0.5"/>
+
+  <!-- main.py -->
+  <rect x="280" y="410" width="130" height="60" rx="6" fill="#fff" stroke="#d93025" stroke-width="1"/>
+  <text x="345" y="435" text-anchor="middle" font-weight="bold" fill="#333" font-size="12">main.py</text>
+  <text x="345" y="453" text-anchor="middle" fill="#5f6368" font-size="10">WebSocket Server</text>
+  <text x="345" y="465" text-anchor="middle" fill="#5f6368" font-size="10">upstream / downstream</text>
+
+  <!-- ADK Runner -->
+  <rect x="430" y="410" width="130" height="60" rx="6" fill="#fff" stroke="#d93025" stroke-width="1"/>
+  <text x="495" y="435" text-anchor="middle" font-weight="bold" fill="#333" font-size="12">ADK Runner</text>
+  <text x="495" y="453" text-anchor="middle" fill="#5f6368" font-size="10">LiveRequestQueue</text>
+
+  <!-- Agent Archie -->
+  <rect x="430" y="490" width="130" height="60" rx="6" fill="#fef7e0" stroke="#e8a700" stroke-width="1.5"/>
+  <text x="495" y="515" text-anchor="middle" font-weight="bold" fill="#e8a700" font-size="12">Agent "Archie"</text>
+  <text x="495" y="533" text-anchor="middle" fill="#5f6368" font-size="10">architect_agent</text>
+
+  <!-- Tools -->
+  <rect x="580" y="410" width="150" height="60" rx="6" fill="#fff" stroke="#d93025" stroke-width="1"/>
+  <text x="655" y="430" text-anchor="middle" font-weight="bold" fill="#333" font-size="11">Tools</text>
+  <text x="655" y="448" text-anchor="middle" fill="#5f6368" font-size="10">save_whiteboard_snapshot</text>
+  <text x="655" y="462" text-anchor="middle" fill="#5f6368" font-size="10">save_review_note</text>
+
+  <!-- Services box -->
+  <rect x="580" y="490" width="150" height="60" rx="6" fill="#fff" stroke="#d93025" stroke-width="1"/>
+  <text x="655" y="510" text-anchor="middle" font-weight="bold" fill="#333" font-size="11">Services</text>
+  <text x="655" y="528" text-anchor="middle" fill="#5f6368" font-size="10">firestore_service.py</text>
+  <text x="655" y="542" text-anchor="middle" fill="#5f6368" font-size="10">storage_service.py</text>
+
+  <!-- Internal arrows: main → ADK Runner -->
+  <line x1="410" y1="440" x2="428" y2="440" stroke="#555" stroke-width="1" marker-end="url(#arrow)"/>
+  <!-- ADK Runner → Agent -->
+  <line x1="495" y1="470" x2="495" y2="488" stroke="#555" stroke-width="1" marker-end="url(#arrow)"/>
+  <!-- Agent → Tools -->
+  <line x1="560" y1="520" x2="578" y2="440" stroke="#555" stroke-width="1" marker-end="url(#arrow)"/>
+  <!-- Tools → Services -->
+  <line x1="655" y1="470" x2="655" y2="488" stroke="#555" stroke-width="1" marker-end="url(#arrow)"/>
+
+  <!-- Frontend to Backend -->
+  <line x1="360" y1="300" x2="360" y2="338" stroke="#1a73e8" stroke-width="2" marker-end="url(#arrow-blue)"/>
+  <text x="370" y="323" fill="#1a73e8" font-size="10" font-weight="bold">WebSocket</text>
+
+  <!-- User to Frontend -->
+  <!-- Arrows user → frontend -->
+  <line x1="180" y1="260" x2="258" y2="200" stroke="#1a73e8" stroke-width="1.5" marker-end="url(#arrow-blue)"/>
+  <text x="195" y="215" fill="#1a73e8" font-size="9" font-weight="bold">JPEG 1fps</text>
+
+  <line x1="180" y1="295" x2="258" y2="230" stroke="#1a73e8" stroke-width="1.5" marker-end="url(#arrow-blue)"/>
+  <text x="195" y="250" fill="#1a73e8" font-size="9" font-weight="bold">PCM16 16kHz</text>
+
+  <!-- Arrow frontend → user (audio playback) -->
+  <line x1="258" y1="270" x2="180" y2="330" stroke="#0d652d" stroke-width="1.5" marker-end="url(#arrow-green)"/>
+  <text x="193" y="316" fill="#0d652d" font-size="9" font-weight="bold">PCM 24kHz</text>
+
+  <!-- Arrow frontend → user (transcripts) -->
+  <line x1="258" y1="285" x2="180" y2="370" stroke="#0d652d" stroke-width="1.5" marker-end="url(#arrow-green)"/>
+  <text x="190" y="350" fill="#0d652d" font-size="9" font-weight="bold">Transcripts</text>
+
+  <!-- Gemini Live API -->
+  <rect x="830" y="170" width="220" height="120" rx="12" fill="#e6f4ea" stroke="#0d652d" stroke-width="1.5"/>
+  <text x="940" y="200" text-anchor="middle" font-weight="bold" fill="#0d652d" font-size="14">Gemini Live API</text>
+  <text x="940" y="220" text-anchor="middle" fill="#5f6368" font-size="11">gemini-2.5-flash-native-audio-preview-12-2025</text>
+  <text x="940" y="238" text-anchor="middle" fill="#5f6368" font-size="11"></text>
+  <line x1="850" y1="248" x2="1030" y2="248" stroke="#0d652d" stroke-width="0.5"/>
+  <text x="940" y="268" text-anchor="middle" fill="#333" font-size="11">Bidi-streaming</text>
+  <text x="940" y="283" text-anchor="middle" fill="#333" font-size="11">Audio + Video + Text</text>
+
+  <!-- Backend → Gemini -->
+  <line x1="740" y1="440" x2="830" y2="270" stroke="#0d652d" stroke-width="2" marker-end="url(#arrow-green)"/>
+  <line x1="828" y1="250" x2="740" y2="420" stroke="#0d652d" stroke-width="2" marker-end="url(#arrow-green)"/>
+  <text x="810" y="340" fill="#0d652d" font-size="10" font-weight="bold" transform="rotate(-40,810,340)">Bidi-stream</text>
+
+  <!-- Cloud Firestore -->
+  <rect x="830" y="360" width="220" height="100" rx="12" fill="#fce8e6" stroke="#d93025" stroke-width="1.5"/>
+  <text x="940" y="388" text-anchor="middle" font-weight="bold" fill="#d93025" font-size="14">Cloud Firestore</text>
+  <line x1="850" y1="398" x2="1030" y2="398" stroke="#d93025" stroke-width="0.5"/>
+  <text x="940" y="418" text-anchor="middle" fill="#333" font-size="11">Sessions</text>
+  <text x="940" y="436" text-anchor="middle" fill="#333" font-size="11">Review Notes</text>
+  <text x="940" y="454" text-anchor="middle" fill="#333" font-size="11">Snapshot Metadata</text>
+
+  <!-- Cloud Storage -->
+  <rect x="830" y="490" width="220" height="80" rx="12" fill="#fce8e6" stroke="#d93025" stroke-width="1.5"/>
+  <text x="940" y="518" text-anchor="middle" font-weight="bold" fill="#d93025" font-size="14">Cloud Storage</text>
+  <line x1="850" y1="528" x2="1030" y2="528" stroke="#d93025" stroke-width="0.5"/>
+  <text x="940" y="548" text-anchor="middle" fill="#333" font-size="11">Whiteboard Snapshots (JPEG)</text>
+
+  <!-- Services → Firestore -->
+  <line x1="730" y1="510" x2="828" y2="420" stroke="#d93025" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <!-- Services → Storage -->
+  <line x1="730" y1="530" x2="828" y2="530" stroke="#d93025" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <!-- Legend -->
+  <rect x="30" y="555" width="280" height="55" rx="8" fill="#f8f9fa" stroke="#dadce0" stroke-width="1"/>
+  <text x="45" y="575" font-size="11" font-weight="bold" fill="#333">Legend:</text>
+  <line x1="45" y1="590" x2="75" y2="590" stroke="#1a73e8" stroke-width="2"/>
+  <text x="80" y="594" fill="#333" font-size="10">Client → Server</text>
+  <line x1="145" y1="590" x2="175" y2="590" stroke="#0d652d" stroke-width="2"/>
+  <text x="180" y="594" fill="#333" font-size="10">Server → Client / API</text>
+</svg>

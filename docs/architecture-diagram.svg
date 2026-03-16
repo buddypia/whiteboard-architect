@@ -1,0 +1,335 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 820" width="1200" height="820">
+  <defs>
+    <linearGradient id="bgMain" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#06080d"/>
+      <stop offset="100%" stop-color="#0f1729"/>
+    </linearGradient>
+    <linearGradient id="gEmerald" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#059669"/>
+      <stop offset="100%" stop-color="#10b981"/>
+    </linearGradient>
+    <linearGradient id="gBlue" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#2563eb"/>
+      <stop offset="100%" stop-color="#3b82f6"/>
+    </linearGradient>
+    <linearGradient id="gPurple" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#7c3aed"/>
+      <stop offset="100%" stop-color="#8b5cf6"/>
+    </linearGradient>
+    <linearGradient id="gAmber" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#d97706"/>
+      <stop offset="100%" stop-color="#f59e0b"/>
+    </linearGradient>
+    <linearGradient id="gCyan" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#0891b2"/>
+      <stop offset="100%" stop-color="#06b6d4"/>
+    </linearGradient>
+    <linearGradient id="gRed" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#dc2626"/>
+      <stop offset="100%" stop-color="#ef4444"/>
+    </linearGradient>
+    <linearGradient id="gRose" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#e11d48"/>
+      <stop offset="100%" stop-color="#f43f5e"/>
+    </linearGradient>
+    <filter id="shadow">
+      <feDropShadow dx="0" dy="2" stdDeviation="4" flood-color="#000" flood-opacity="0.3"/>
+    </filter>
+    <marker id="mGreen" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#10b981"/>
+    </marker>
+    <marker id="mBlue" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#3b82f6"/>
+    </marker>
+    <marker id="mPurple" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#8b5cf6"/>
+    </marker>
+    <marker id="mAmber" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#f59e0b"/>
+    </marker>
+    <marker id="mCyan" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#06b6d4"/>
+    </marker>
+    <marker id="mGray" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#4b5563"/>
+    </marker>
+    <marker id="mRed" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#ef4444"/>
+    </marker>
+  </defs>
+
+  <style>
+    .t { font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif; }
+    .mono { font-family: 'JetBrains Mono', 'Courier New', monospace; }
+  </style>
+
+  <!-- Background -->
+  <rect width="1200" height="820" fill="url(#bgMain)" rx="12"/>
+
+  <!-- Title -->
+  <text x="600" y="38" text-anchor="middle" class="t" fill="#e2e8f0" font-size="22" font-weight="700">Whiteboard Architect  -  System Architecture</text>
+  <text x="600" y="58" text-anchor="middle" class="t" fill="#64748b" font-size="12">Real-time AI Architecture Review Agent powered by Gemini Live API + Google ADK</text>
+
+  <!-- ================================================================== -->
+  <!--  LAYER 1: USER                                                     -->
+  <!-- ================================================================== -->
+  <rect x="40" y="90" width="140" height="260" rx="12" fill="#0f1729" stroke="#3b82f6" stroke-width="1.5" filter="url(#shadow)"/>
+  <rect x="40" y="90" width="140" height="30" rx="12" fill="url(#gBlue)" opacity="0.85"/>
+  <text x="110" y="110" text-anchor="middle" class="t" fill="#fff" font-size="13" font-weight="700">User (Browser)</text>
+
+  <text x="60" y="148" class="t" fill="#94a3b8" font-size="10" font-weight="600" letter-spacing="1">INPUTS</text>
+  <rect x="58" y="158" width="105" height="22" rx="4" fill="#1e293b" stroke="#334155" stroke-width="0.5"/>
+  <text x="110" y="173" text-anchor="middle" class="t" fill="#93c5fd" font-size="10">Microphone</text>
+  <rect x="58" y="186" width="105" height="22" rx="4" fill="#1e293b" stroke="#334155" stroke-width="0.5"/>
+  <text x="110" y="201" text-anchor="middle" class="t" fill="#93c5fd" font-size="10">Camera</text>
+  <rect x="58" y="214" width="105" height="22" rx="4" fill="#1e293b" stroke="#334155" stroke-width="0.5"/>
+  <text x="110" y="229" text-anchor="middle" class="t" fill="#93c5fd" font-size="10">Text / Controls</text>
+
+  <text x="60" y="260" class="t" fill="#94a3b8" font-size="10" font-weight="600" letter-spacing="1">OUTPUTS</text>
+  <rect x="58" y="270" width="105" height="22" rx="4" fill="#1e293b" stroke="#334155" stroke-width="0.5"/>
+  <text x="110" y="285" text-anchor="middle" class="t" fill="#93c5fd" font-size="10">Speaker</text>
+  <rect x="58" y="298" width="105" height="22" rx="4" fill="#1e293b" stroke="#334155" stroke-width="0.5"/>
+  <text x="110" y="313" text-anchor="middle" class="t" fill="#93c5fd" font-size="10">UI / Annotations</text>
+  <rect x="58" y="326" width="105" height="22" rx="4" fill="#1e293b" stroke="#334155" stroke-width="0.5"/>
+  <text x="110" y="341" text-anchor="middle" class="t" fill="#93c5fd" font-size="10">Transcripts</text>
+
+  <!-- ================================================================== -->
+  <!--  LAYER 2: FRONTEND (NEXT.JS)                                       -->
+  <!-- ================================================================== -->
+  <rect x="220" y="90" width="240" height="340" rx="12" fill="#0f1729" stroke="#3b82f6" stroke-width="1.5" filter="url(#shadow)"/>
+  <rect x="220" y="90" width="240" height="30" rx="12" fill="url(#gBlue)" opacity="0.85"/>
+  <text x="340" y="110" text-anchor="middle" class="t" fill="#fff" font-size="13" font-weight="700">Frontend (Next.js :3000)</text>
+
+  <!-- Hooks -->
+  <text x="240" y="142" class="t" fill="#94a3b8" font-size="10" font-weight="600" letter-spacing="1">REACT HOOKS</text>
+  <rect x="238" y="150" width="204" height="24" rx="5" fill="#1e293b" stroke="#2563eb" stroke-width="0.8"/>
+  <text x="340" y="166" text-anchor="middle" class="mono" fill="#60a5fa" font-size="10">useAudioCapture</text>
+  <text x="340" y="178" text-anchor="middle" class="t" fill="#64748b" font-size="8">AudioWorklet PCM16 16kHz + VAD</text>
+
+  <rect x="238" y="190" width="204" height="24" rx="5" fill="#1e293b" stroke="#2563eb" stroke-width="0.8"/>
+  <text x="340" y="206" text-anchor="middle" class="mono" fill="#60a5fa" font-size="10">useVideoCapture</text>
+  <text x="340" y="218" text-anchor="middle" class="t" fill="#64748b" font-size="8">640x480 JPEG 70% @ 1fps</text>
+
+  <rect x="238" y="230" width="204" height="24" rx="5" fill="#1e293b" stroke="#2563eb" stroke-width="0.8"/>
+  <text x="340" y="246" text-anchor="middle" class="mono" fill="#60a5fa" font-size="10">useAudioPlayback</text>
+  <text x="340" y="258" text-anchor="middle" class="t" fill="#64748b" font-size="8">Gapless PCM 24kHz + barge-in</text>
+
+  <rect x="238" y="270" width="204" height="24" rx="5" fill="#1e293b" stroke="#2563eb" stroke-width="0.8"/>
+  <text x="340" y="286" text-anchor="middle" class="mono" fill="#60a5fa" font-size="10">useWebSocket</text>
+  <text x="340" y="298" text-anchor="middle" class="t" fill="#64748b" font-size="8">Exponential backoff (1s-30s)</text>
+
+  <!-- Components -->
+  <text x="240" y="322" class="t" fill="#94a3b8" font-size="10" font-weight="600" letter-spacing="1">COMPONENTS</text>
+  <rect x="238" y="330" width="100" height="22" rx="4" fill="#172554" stroke="#1d4ed8" stroke-width="0.5"/>
+  <text x="288" y="345" text-anchor="middle" class="t" fill="#93c5fd" font-size="9">SessionApp</text>
+  <rect x="342" y="330" width="100" height="22" rx="4" fill="#172554" stroke="#1d4ed8" stroke-width="0.5"/>
+  <text x="392" y="345" text-anchor="middle" class="t" fill="#93c5fd" font-size="9">CameraPreview</text>
+  <rect x="238" y="356" width="100" height="22" rx="4" fill="#172554" stroke="#1d4ed8" stroke-width="0.5"/>
+  <text x="288" y="371" text-anchor="middle" class="t" fill="#93c5fd" font-size="9">TranscriptPanel</text>
+  <rect x="342" y="356" width="100" height="22" rx="4" fill="#172554" stroke="#1d4ed8" stroke-width="0.5"/>
+  <text x="392" y="371" text-anchor="middle" class="t" fill="#93c5fd" font-size="9">ReviewNotes</text>
+  <rect x="238" y="382" width="100" height="22" rx="4" fill="#172554" stroke="#1d4ed8" stroke-width="0.5"/>
+  <text x="288" y="397" text-anchor="middle" class="t" fill="#93c5fd" font-size="9">DiagramPanel</text>
+  <rect x="342" y="382" width="100" height="22" rx="4" fill="#172554" stroke="#1d4ed8" stroke-width="0.5"/>
+  <text x="392" y="397" text-anchor="middle" class="t" fill="#93c5fd" font-size="9">Summary</text>
+
+  <!-- User -> Frontend arrows -->
+  <line x1="180" y1="170" x2="218" y2="164" stroke="#3b82f6" stroke-width="1.5" marker-end="url(#mBlue)"/>
+  <text x="192" y="158" class="t" fill="#60a5fa" font-size="8" font-weight="600">PCM16</text>
+  <line x1="180" y1="197" x2="218" y2="200" stroke="#3b82f6" stroke-width="1.5" marker-end="url(#mBlue)"/>
+  <text x="192" y="193" class="t" fill="#60a5fa" font-size="8" font-weight="600">JPEG</text>
+  <!-- Frontend -> User arrows -->
+  <line x1="218" y1="250" x2="180" y2="285" stroke="#10b981" stroke-width="1.5" marker-end="url(#mGreen)"/>
+  <text x="185" y="272" class="t" fill="#34d399" font-size="8" font-weight="600">PCM24</text>
+  <line x1="218" y1="330" x2="180" y2="312" stroke="#10b981" stroke-width="1.5" marker-end="url(#mGreen)"/>
+
+
+  <!-- ================================================================== -->
+  <!--  WEBSOCKET TRANSPORT BAR                                           -->
+  <!-- ================================================================== -->
+  <rect x="220" y="440" width="710" height="38" rx="8" fill="#1e293b" opacity="0.7" filter="url(#shadow)"/>
+  <text x="575" y="464" text-anchor="middle" class="mono" fill="#e2e8f0" font-size="12" font-weight="600">WebSocket   ws://backend/ws/{userId}/{sessionId}</text>
+
+  <!-- Frontend <-> WS bar -->
+  <line x1="340" y1="420" x2="340" y2="438" stroke="#3b82f6" stroke-width="2" marker-end="url(#mBlue)"/>
+  <line x1="360" y1="438" x2="360" y2="420" stroke="#10b981" stroke-width="2" marker-end="url(#mGreen)"/>
+
+  <!-- ================================================================== -->
+  <!--  LAYER 3: BACKEND (FASTAPI + ADK)                                  -->
+  <!-- ================================================================== -->
+  <rect x="220" y="500" width="710" height="300" rx="12" fill="#0f1729" stroke="#10b981" stroke-width="1.5" filter="url(#shadow)"/>
+  <rect x="220" y="500" width="710" height="30" rx="12" fill="url(#gEmerald)" opacity="0.85"/>
+  <text x="575" y="520" text-anchor="middle" class="t" fill="#fff" font-size="13" font-weight="700">Backend (FastAPI + Google ADK :8080)</text>
+
+  <!-- main.py / WS Server -->
+  <rect x="240" y="545" width="180" height="90" rx="8" fill="#0a1628" stroke="#10b981" stroke-width="1" filter="url(#shadow)"/>
+  <text x="330" y="567" text-anchor="middle" class="mono" fill="#34d399" font-size="11" font-weight="600">main.py</text>
+  <text x="330" y="585" text-anchor="middle" class="t" fill="#64748b" font-size="9">WebSocket Server</text>
+  <text x="330" y="600" text-anchor="middle" class="t" fill="#64748b" font-size="9">upstream_task (Client->Gemini)</text>
+  <text x="330" y="615" text-anchor="middle" class="t" fill="#64748b" font-size="9">downstream_task (Gemini->Client)</text>
+
+  <!-- WS bar -> main.py -->
+  <line x1="400" y1="480" x2="400" y2="543" stroke="#10b981" stroke-width="1.5" marker-end="url(#mGreen)"/>
+  <line x1="380" y1="543" x2="380" y2="480" stroke="#8b5cf6" stroke-width="1.5" marker-end="url(#mPurple)"/>
+
+  <!-- LiveRequestQueue -->
+  <rect x="440" y="545" width="160" height="90" rx="8" fill="#0a1628" stroke="#f59e0b" stroke-width="1" filter="url(#shadow)"/>
+  <text x="520" y="567" text-anchor="middle" class="mono" fill="#fbbf24" font-size="11" font-weight="600">LiveRequestQueue</text>
+  <text x="520" y="585" text-anchor="middle" class="t" fill="#64748b" font-size="9">Multiplexes audio,</text>
+  <text x="520" y="600" text-anchor="middle" class="t" fill="#64748b" font-size="9">video, text into</text>
+  <text x="520" y="615" text-anchor="middle" class="t" fill="#64748b" font-size="9">single bidi-stream</text>
+
+  <!-- main.py -> LiveRequestQueue -->
+  <line x1="420" y1="585" x2="438" y2="585" stroke="#f59e0b" stroke-width="1.5" marker-end="url(#mAmber)"/>
+
+  <!-- ADK Runner -->
+  <rect x="620" y="545" width="140" height="90" rx="8" fill="#0a1628" stroke="#8b5cf6" stroke-width="1" filter="url(#shadow)"/>
+  <text x="690" y="567" text-anchor="middle" class="mono" fill="#a78bfa" font-size="11" font-weight="600">ADK Runner</text>
+  <text x="690" y="585" text-anchor="middle" class="t" fill="#64748b" font-size="9">runner.run_live()</text>
+  <text x="690" y="600" text-anchor="middle" class="t" fill="#64748b" font-size="9">Event stream</text>
+  <text x="690" y="615" text-anchor="middle" class="t" fill="#64748b" font-size="9">processing</text>
+
+  <!-- LiveRequestQueue -> ADK Runner -->
+  <line x1="600" y1="585" x2="618" y2="585" stroke="#8b5cf6" stroke-width="1.5" marker-end="url(#mPurple)"/>
+
+  <!-- Whiteboard Analyzer -->
+  <rect x="780" y="545" width="140" height="90" rx="8" fill="#0a1628" stroke="#06b6d4" stroke-width="1" stroke-dasharray="5,3" filter="url(#shadow)"/>
+  <text x="850" y="564" text-anchor="middle" class="mono" fill="#22d3ee" font-size="10" font-weight="600">Whiteboard</text>
+  <text x="850" y="578" text-anchor="middle" class="mono" fill="#22d3ee" font-size="10" font-weight="600">Analyzer</text>
+  <text x="850" y="598" text-anchor="middle" class="t" fill="#64748b" font-size="9">Periodic analysis</text>
+  <text x="850" y="612" text-anchor="middle" class="t" fill="#64748b" font-size="9">via Gemini 3 Flash</text>
+  <text x="850" y="626" text-anchor="middle" class="t" fill="#64748b" font-size="9">(every 30s)</text>
+
+  <!-- Agent "Archie" -->
+  <rect x="240" y="660" width="210" height="120" rx="8" fill="#0a1628" stroke="#10b981" stroke-width="2" filter="url(#shadow)"/>
+  <rect x="240" y="660" width="210" height="28" rx="8" fill="url(#gEmerald)" opacity="0.85"/>
+  <text x="345" y="679" text-anchor="middle" class="t" fill="#fff" font-size="12" font-weight="700">Agent "Archie"</text>
+  <text x="345" y="705" text-anchor="middle" class="t" fill="#34d399" font-size="10">Senior Cloud Architect</text>
+  <text x="345" y="723" text-anchor="middle" class="t" fill="#64748b" font-size="9">5-Axis Review:</text>
+  <text x="345" y="738" text-anchor="middle" class="t" fill="#64748b" font-size="9">Security / Scalability / Reliability</text>
+  <text x="345" y="753" text-anchor="middle" class="t" fill="#64748b" font-size="9">Cost / Operations</text>
+  <text x="345" y="768" text-anchor="middle" class="t" fill="#64748b" font-size="8">Voice: Aoede (ja-JP) | Thinking: 1024</text>
+
+  <!-- ADK Runner -> Agent -->
+  <line x1="690" y1="637" x2="430" y2="658" stroke="#10b981" stroke-width="1.5" marker-end="url(#mGreen)"/>
+
+  <!-- ADK Tools -->
+  <rect x="470" y="660" width="200" height="120" rx="8" fill="#0a1628" stroke="#ef4444" stroke-width="1.5" filter="url(#shadow)"/>
+  <rect x="470" y="660" width="200" height="28" rx="8" fill="url(#gRed)" opacity="0.85"/>
+  <text x="570" y="679" text-anchor="middle" class="t" fill="#fff" font-size="12" font-weight="700">ADK Tools</text>
+
+  <rect x="488" y="696" width="164" height="18" rx="3" fill="#1c1517" stroke="#7f1d1d" stroke-width="0.5"/>
+  <text x="570" y="709" text-anchor="middle" class="mono" fill="#fca5a5" font-size="9">save_whiteboard_snapshot</text>
+  <rect x="488" y="718" width="164" height="18" rx="3" fill="#1c1517" stroke="#7f1d1d" stroke-width="0.5"/>
+  <text x="570" y="731" text-anchor="middle" class="mono" fill="#fca5a5" font-size="9">save_review_note</text>
+  <rect x="488" y="740" width="164" height="18" rx="3" fill="#1c1517" stroke="#7f1d1d" stroke-width="0.5"/>
+  <text x="570" y="753" text-anchor="middle" class="mono" fill="#fca5a5" font-size="9">add_annotation</text>
+  <rect x="488" y="762" width="164" height="18" rx="3" fill="#1c1517" stroke="#7f1d1d" stroke-width="0.5"/>
+  <text x="570" y="775" text-anchor="middle" class="mono" fill="#fca5a5" font-size="9">generate_diagram</text>
+
+  <!-- Agent -> Tools -->
+  <line x1="452" y1="720" x2="468" y2="720" stroke="#ef4444" stroke-width="1.5" marker-end="url(#mRed)"/>
+
+  <!-- Services -->
+  <rect x="690" y="660" width="230" height="120" rx="8" fill="#0a1628" stroke="#06b6d4" stroke-width="1" filter="url(#shadow)"/>
+  <rect x="690" y="660" width="230" height="28" rx="8" fill="url(#gCyan)" opacity="0.85"/>
+  <text x="805" y="679" text-anchor="middle" class="t" fill="#fff" font-size="12" font-weight="700">Services</text>
+
+  <rect x="708" y="696" width="194" height="18" rx="3" fill="#0c1927" stroke="#164e63" stroke-width="0.5"/>
+  <text x="805" y="709" text-anchor="middle" class="mono" fill="#67e8f9" font-size="9">firestore_service.py</text>
+  <rect x="708" y="718" width="194" height="18" rx="3" fill="#0c1927" stroke="#164e63" stroke-width="0.5"/>
+  <text x="805" y="731" text-anchor="middle" class="mono" fill="#67e8f9" font-size="9">storage_service.py</text>
+  <rect x="708" y="740" width="194" height="18" rx="3" fill="#0c1927" stroke="#164e63" stroke-width="0.5"/>
+  <text x="805" y="753" text-anchor="middle" class="mono" fill="#67e8f9" font-size="9">diagram_service.py</text>
+  <rect x="708" y="762" width="194" height="18" rx="3" fill="#0c1927" stroke="#164e63" stroke-width="0.5"/>
+  <text x="805" y="775" text-anchor="middle" class="mono" fill="#67e8f9" font-size="9">translation_service.py</text>
+
+  <!-- Tools -> Services -->
+  <line x1="670" y1="730" x2="688" y2="730" stroke="#06b6d4" stroke-width="1.5" marker-end="url(#mCyan)"/>
+
+  <!-- ================================================================== -->
+  <!--  LAYER 4: EXTERNAL SERVICES (RIGHT SIDE)                           -->
+  <!-- ================================================================== -->
+
+  <!-- Gemini Live API -->
+  <rect x="975" y="90" width="200" height="165" rx="12" fill="#0f1729" stroke="#8b5cf6" stroke-width="2" filter="url(#shadow)"/>
+  <rect x="975" y="90" width="200" height="32" rx="12" fill="url(#gPurple)" opacity="0.85"/>
+  <text x="1075" y="112" text-anchor="middle" class="t" fill="#fff" font-size="13" font-weight="700">Gemini Live API</text>
+  <text x="1075" y="146" text-anchor="middle" class="t" fill="#c4b5fd" font-size="9">gemini-2.5-flash</text>
+  <text x="1075" y="160" text-anchor="middle" class="t" fill="#c4b5fd" font-size="9">-native-audio-preview</text>
+  <line x1="993" y1="172" x2="1157" y2="172" stroke="#4c1d95" stroke-width="0.5"/>
+  <text x="1075" y="192" text-anchor="middle" class="t" fill="#a78bfa" font-size="10">Bidi-Streaming</text>
+  <text x="1075" y="208" text-anchor="middle" class="t" fill="#94a3b8" font-size="9">Audio + Video + Text</text>
+  <text x="1075" y="224" text-anchor="middle" class="t" fill="#94a3b8" font-size="9">+ Function Calls</text>
+  <text x="1075" y="244" text-anchor="middle" class="t" fill="#64748b" font-size="9">Native barge-in support</text>
+
+  <!-- Cloud Firestore -->
+  <rect x="975" y="280" width="200" height="105" rx="12" fill="#0f1729" stroke="#f59e0b" stroke-width="1.5" filter="url(#shadow)"/>
+  <rect x="975" y="280" width="200" height="30" rx="12" fill="url(#gAmber)" opacity="0.85"/>
+  <text x="1075" y="300" text-anchor="middle" class="t" fill="#fff" font-size="12" font-weight="700">Cloud Firestore</text>
+  <text x="1075" y="328" text-anchor="middle" class="mono" fill="#fbbf24" font-size="9">sessions/{id}/snapshots</text>
+  <text x="1075" y="345" text-anchor="middle" class="mono" fill="#fbbf24" font-size="9">sessions/{id}/notes</text>
+  <text x="1075" y="362" text-anchor="middle" class="mono" fill="#fbbf24" font-size="9">sessions/{id}/diagrams</text>
+  <text x="1075" y="378" text-anchor="middle" class="t" fill="#64748b" font-size="8">Graceful degradation</text>
+
+  <!-- Cloud Storage -->
+  <rect x="975" y="410" width="200" height="85" rx="12" fill="#0f1729" stroke="#f59e0b" stroke-width="1.5" filter="url(#shadow)"/>
+  <rect x="975" y="410" width="200" height="30" rx="12" fill="url(#gAmber)" opacity="0.85"/>
+  <text x="1075" y="430" text-anchor="middle" class="t" fill="#fff" font-size="12" font-weight="700">Cloud Storage</text>
+  <text x="1075" y="460" text-anchor="middle" class="mono" fill="#fbbf24" font-size="9">{session}/snapshots/*.jpg</text>
+  <text x="1075" y="477" text-anchor="middle" class="t" fill="#64748b" font-size="8">30-day lifecycle policy</text>
+
+  <!-- Cloud Run boundary -->
+  <rect x="975" y="520" width="200" height="75" rx="12" fill="#0f1729" stroke="#10b981" stroke-width="1.5" filter="url(#shadow)"/>
+  <rect x="975" y="520" width="200" height="30" rx="12" fill="url(#gEmerald)" opacity="0.85"/>
+  <text x="1075" y="540" text-anchor="middle" class="t" fill="#fff" font-size="12" font-weight="700">Cloud Run</text>
+  <text x="1075" y="568" text-anchor="middle" class="t" fill="#34d399" font-size="9">BE: 2CPU / 2Gi / 3600s</text>
+  <text x="1075" y="584" text-anchor="middle" class="t" fill="#34d399" font-size="9">FE: 1CPU / 512Mi</text>
+
+  <!-- Terraform -->
+  <rect x="975" y="620" width="200" height="55" rx="12" fill="#0f1729" stroke="#94a3b8" stroke-width="1" stroke-dasharray="5,3" filter="url(#shadow)"/>
+  <text x="1075" y="645" text-anchor="middle" class="t" fill="#94a3b8" font-size="11" font-weight="600">Terraform IaC</text>
+  <text x="1075" y="663" text-anchor="middle" class="t" fill="#64748b" font-size="9">infra/terraform/main.tf</text>
+
+  <!-- ================================================================== -->
+  <!--  CONNECTION ARROWS                                                 -->
+  <!-- ================================================================== -->
+
+  <!-- Backend -> Gemini Live API (bidi) -->
+  <path d="M 930 565 Q 978 390 973 220" stroke="#8b5cf6" stroke-width="2" fill="none" marker-end="url(#mPurple)"/>
+  <path d="M 973 195 Q 938 380 930 540" stroke="#10b981" stroke-width="2" fill="none" marker-end="url(#mGreen)" stroke-dasharray="6,3"/>
+  <text x="952" y="330" class="t" fill="#a78bfa" font-size="9" font-weight="600" transform="rotate(-78,952,330)">Bidi-stream</text>
+
+  <!-- Services -> Firestore -->
+  <line x1="920" y1="710" x2="973" y2="350" stroke="#f59e0b" stroke-width="1.2" stroke-dasharray="5,3" marker-end="url(#mAmber)"/>
+  <!-- Services -> Cloud Storage -->
+  <line x1="920" y1="750" x2="973" y2="460" stroke="#f59e0b" stroke-width="1.2" stroke-dasharray="5,3" marker-end="url(#mAmber)"/>
+
+
+  <!-- ================================================================== -->
+  <!--  LEGEND                                                            -->
+  <!-- ================================================================== -->
+  <rect x="40" y="380" width="140" height="165" rx="10" fill="#0f1729" stroke="#1e293b" stroke-width="1" filter="url(#shadow)"/>
+  <text x="110" y="400" text-anchor="middle" class="t" fill="#e2e8f0" font-size="10" font-weight="700">Legend</text>
+
+  <line x1="55" y1="415" x2="85" y2="415" stroke="#3b82f6" stroke-width="2"/>
+  <text x="92" y="419" class="t" fill="#94a3b8" font-size="9">Client Input</text>
+
+  <line x1="55" y1="435" x2="85" y2="435" stroke="#10b981" stroke-width="2"/>
+  <text x="92" y="439" class="t" fill="#94a3b8" font-size="9">Server Output</text>
+
+  <line x1="55" y1="455" x2="85" y2="455" stroke="#8b5cf6" stroke-width="2"/>
+  <text x="92" y="459" class="t" fill="#94a3b8" font-size="9">Gemini API</text>
+
+  <line x1="55" y1="475" x2="85" y2="475" stroke="#f59e0b" stroke-width="2" stroke-dasharray="5,3"/>
+  <text x="92" y="479" class="t" fill="#94a3b8" font-size="9">Persistence</text>
+
+  <line x1="55" y1="495" x2="85" y2="495" stroke="#ef4444" stroke-width="2"/>
+  <text x="92" y="499" class="t" fill="#94a3b8" font-size="9">Tool Calls</text>
+
+  <line x1="55" y1="515" x2="85" y2="515" stroke="#06b6d4" stroke-width="1" stroke-dasharray="5,3"/>
+  <text x="92" y="519" class="t" fill="#94a3b8" font-size="9">Background</text>
+
+  <line x1="55" y1="535" x2="85" y2="535" stroke="#94a3b8" stroke-width="1" stroke-dasharray="3,3"/>
+  <text x="92" y="539" class="t" fill="#94a3b8" font-size="9">IaC</text>
+</svg>
