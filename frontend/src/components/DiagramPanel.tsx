@@ -174,8 +174,11 @@ export const DiagramPanel = memo(function DiagramPanel({
 
       {/* Diagram thumbnail */}
       {diagramUrl && (
-        <button
+        <div
+          role="button"
+          tabIndex={0}
           onClick={() => setExpanded(true)}
+          onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setExpanded(true); } }}
           className="group relative w-40 rounded-lg overflow-hidden border border-[var(--border)] shadow-lg hover:shadow-xl hover:border-[var(--accent)]/50 transition-all duration-200 cursor-pointer bg-[var(--diagram-bg)]"
           aria-label="図解を拡大表示"
         >
@@ -214,7 +217,7 @@ export const DiagramPanel = memo(function DiagramPanel({
           <div className="absolute bottom-0 inset-x-0 bg-[var(--surface)]/90 backdrop-blur-sm px-2 py-1 border-t border-[var(--border-subtle)]">
             <span className="text-[10px] text-[var(--foreground-muted)] font-medium">図解</span>
           </div>
-        </button>
+        </div>
       )}
     </div>
   );

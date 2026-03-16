@@ -1,7 +1,7 @@
 # Whiteboard Architect — Developer Guide
 
 > エンジニア向けオンボーディングマニュアル
-> 最終更新: 2026-03-10
+> 最終更新: 2026-03-17
 
 ---
 
@@ -32,7 +32,10 @@
 
 - 描かれた図を **映像で認識**（1fps JPEG）
 - ユーザーの説明を **音声で理解**（PCM16 16kHz）
-- セキュリティ・スケーラビリティ等の観点で **音声でフィードバック**（PCM 24kHz）
+- セキュリティ・スケーラビリティ等の観点で **英語音声でフィードバック**（PCM 24kHz）
+- トランスクリプトを **英語+日本語のバイリンガル表示**
+- バックグラウンドで **構造化分析** を実行し、アノテーションを自動生成
+- 手描きスケッチから **SVGダイアグラムを自動生成**
 - 重要な知見を **レビューノートとして自動記録**
 - ホワイトボードの **スナップショットを自動保存**
 
@@ -48,7 +51,9 @@
 | Frontend | Next.js 16 + React 19 + TypeScript 5 | Web UI |
 | Backend | Python + FastAPI | WebSocket サーバー |
 | AI Framework | Google ADK (Agent Development Kit) | エージェント構築 |
-| AI Model | Gemini 2.5 Flash (Live API) | マルチモーダル推論 |
+| AI Model (Live) | Gemini 2.5 Flash Native Audio (Live API) | ライブ会話 |
+| AI Model (Analysis) | Gemini 3.1 Flash Lite (Standard API) | バックグラウンド分析・翻訳 |
+| AI Model (Diagram) | Gemini 2.0 Flash (Text) | SVGダイアグラム生成 |
 | Database | Cloud Firestore | セッション・ノート永続化 |
 | Storage | Cloud Storage (GCS) | スナップショット画像保存 |
 | Hosting | Cloud Run | サーバーレスコンテナ |
@@ -59,13 +64,9 @@
 
 ## 2. 全体パイプライン
 
-### パイプライン概要図
-
-![Pipeline Overview](./pipeline-overview.svg)
-
 ### ワークフロー一覧
 
-本プロジェクトは以下の 6 つのワークフローで構成されます:
+本プロジェクトは以下の 8 つのワークフローで構成されます:
 
 | # | ワークフロー | 概要 | 主要コンポーネント |
 |---|---|---|---|
@@ -74,7 +75,9 @@
 | W3 | **AI 推論・応答パイプライン** | Gemini Live API → 音声/テキスト → WS → UI | `downstream_task` → `useAudioPlayback` |
 | W4 | **Barge-in（割り込み）** | ユーザー発話検知 → AI 音声即停止 | クライアント VAD + Gemini AAD |
 | W5 | **ツール実行パイプライン** | Gemini → ADK ツール → Firestore/GCS → UI 通知 | `architect_tools` → `services/*` |
-| W6 | **デプロイパイプライン** | Docker Build → Artifact Registry → Cloud Run | `deploy.sh` + Terraform |
+| W6 | **バックグラウンド分析** | Perception Layer → 構造化分析 → アノテーション自動生成 | `perception_task` → `WhiteboardAnalyzer` |
+| W7 | **ダイアグラム生成** | ツール呼び出し → SVG生成 → フロントエンド表示 | `generate_diagram` → `DiagramService` |
+| W8 | **デプロイパイプライン** | Docker Build → Artifact Registry → Cloud Run | `deploy.sh` + Terraform |
 
 ---
 
@@ -116,12 +119,11 @@
 **関連ファイル:**
 - `frontend/src/hooks/useVideoCapture.ts` — カメラ取得、JPEG キャプチャ
 - `frontend/src/lib/constants.ts` — `VIDEO_FPS=1`, `VIDEO_WIDTH=640`, `VIDEO_HEIGHT=480`
-- `backend/main.py` (`upstream_task`) — 映像フレーム転送 + 変化検出
+- `backend/main.py` (`upstream_task`) — 映像フレーム転送
 
 **ポイント:**
 - JPEG 品質: 0.7（帯域とのバランス）
 - 1fps で十分（ホワイトボードは静的に近い）
-- バックエンドで `ChangeDetector` が有効な場合、大きな変化を検知してプロアクティブにレビューを開始
 
 ---
 
@@ -133,8 +135,8 @@ Gemini Live API (bidi-streaming)
     → イベントストリーム分岐:
        ├─ 音声データ → base64 encode → WS {type: "audio", data: "..."}
        │                             → useAudioPlayback → AudioContext 再生
-       ├─ トランスクリプト → WS {type: "transcript", role, text}
-       │                   → TranscriptPanel に表示
+       ├─ トランスクリプト → TranslationService(英→日) → WS {type: "transcript", role, text}
+       │                   → TranscriptPanel にバイリンガル表示
        ├─ ツール実行結果 → WS {type: "tool_call", name, result}
        │                 → Toast 通知 + ReviewNotesPanel/SnapshotGallery 更新
        ├─ アノテーション → WS {type: "annotation", ...}
@@ -171,14 +173,13 @@ Gemini Live API (bidi-streaming)
     └─ サーバー側: Gemini Live API の AAD (Audio Activity Detection)
         → interrupted イベント → WS {type: "interrupted"}
         → クライアント: resumePlayback() でミュートウィンドウ解除
-
-[ユーザー発話 → Gemini が新しい応答を生成]
 ```
 
 **設計思想:**
 - **二重保護**: クライアント VAD（即時応答）+ サーバー AAD（正確な検知）
 - クライアント側で先にオーディオを停止するため、体感 < 100ms で割り込み反応
 - ADK + Live API のネイティブ barge-in サポートにより、カスタムロジック不要
+- Recovery Task が偽barge-in（ユーザーが実際には話していないのにAI停止）を検出
 
 ---
 
@@ -193,36 +194,75 @@ Gemini が必要と判断
     │     ├─ StorageService.upload_snapshot() → GCS
     │     ├─ FirestoreService.save_snapshot_metadata() → Firestore
     │     └─ WS {type: "tool_call", name: "save_whiteboard_snapshot", result: {...}}
-    │         → フロントエンド: SnapshotGallery 更新 + Toast 通知
     │
     ├─ save_review_note(category, finding, severity, recommendation)
     │   → ToolContext に保存
     │   → downstream_task で検知
     │     ├─ FirestoreService.save_review_note() → Firestore
     │     └─ WS {type: "tool_call", name: "save_review_note", result: {...}}
-    │         → フロントエンド: ReviewNotesPanel 更新 + Toast 通知
     │
-    └─ add_annotation(x, y, label, annotation_type, severity, ...)
-        → ToolContext に保存
-        → WS {type: "annotation", ...}
-            → フロントエンド: CameraPreview SVG オーバーレイ
-            → 30秒後に自動消去
+    └─ generate_diagram(description)
+        → ToolContext に保存（status: "queued"）
+        → downstream_task で検知
+          ├─ WS {type: "diagram_generating", diagram_id}
+          ├─ DiagramService.generate_diagram() → SVG生成 (3-7秒)
+          ├─ ローカルファイル保存
+          └─ WS {type: "diagram_generated", diagram_id, url}
 ```
 
 **ツール仕様:**
 
-| ツール名 | パラメータ | 永続化先 |
-|---|---|---|
-| `save_whiteboard_snapshot` | `description` | GCS + Firestore |
-| `save_review_note` | `category`, `finding`, `severity`, `recommendation` | Firestore |
-| `add_annotation` | `x`, `y`, `label`, `annotation_type`, `severity`, `width`, `height` | フロントエンドのみ（一時的） |
-
-**カテゴリ:** security, scalability, reliability, cost, operations
-**重要度:** critical, warning, info, positive
+| ツール名 | パラメータ | 永続化先 | エージェント登録 |
+|---|---|---|---|
+| `save_whiteboard_snapshot` | `description` | GCS + Firestore | ✅ |
+| `save_review_note` | `category`, `finding`, `severity`, `recommendation` | Firestore | ✅ |
+| `generate_diagram` | `description` | ローカルファイル | ✅ |
+| `add_annotation` | `x`, `y`, `label`, `annotation_type`, `severity`, `width`, `height` | フロントエンドのみ | ❌（自動生成） |
 
 ---
 
-### W6: デプロイパイプライン
+### W6: バックグラウンド分析パイプライン
+
+```
+perception_task (10-30秒間隔)
+  → WhiteboardAnalyzer.analyze(image_bytes)
+    → gemini-3.1-flash-lite-preview (Standard API, response_schema指定)
+    → WhiteboardState (components, connections, issues)
+      ├─ _annotations_from_analysis() → WS {type: "annotation", ...} (最大5件)
+      ├─ WS {type: "whiteboard_analysis", ...}
+      │   → WhiteboardAnalysisPanel で構造化表示
+      └─ エージェントへコンテキスト注入
+          → LiveRequestQueue に [Background Analysis Results] プロンプト送信
+          → Archie が分析結果を会話に自然に組み込む
+```
+
+**関連ファイル:**
+- `backend/services/whiteboard_analyzer.py` — 分析エンジン
+- `backend/whiteboard_state.py` — データモデル
+- `backend/main.py` (`perception_task`, `_annotations_from_analysis`) — オーケストレーション
+
+---
+
+### W7: ダイアグラム生成パイプライン
+
+```
+generate_diagram ツール呼び出し or control action
+  → DiagramService.generate_diagram(image_bytes, description)
+    → gemini-2.0-flash (テキストモデル)
+    → SVGコード生成 → scriptタグサニタイズ
+    → ローカルファイル保存
+    → WS {type: "diagram_generated", diagram_id, url}
+      → DiagramPanel: PiPサムネイル + 拡大モーダル表示
+```
+
+**関連ファイル:**
+- `backend/services/diagram_service.py` — SVG生成
+- `backend/tools/architect_tools.py` (`generate_diagram`) — ツール定義
+- `frontend/src/components/DiagramPanel.tsx` — 表示UI
+
+---
+
+### W8: デプロイパイプライン
 
 ```
 [開発者]
@@ -231,11 +271,6 @@ Gemini が必要と判断
       └─ gcloud 認証確認、プロジェクト設定
     Phase 2: Infrastructure
       └─ Terraform init/apply
-         ├─ GCP API 有効化 (Cloud Run, Firestore, Storage, etc.)
-         ├─ Artifact Registry 作成
-         ├─ Service Account + IAM ロール
-         ├─ Firestore Database 作成
-         └─ GCS Bucket 作成（30日ライフサイクル）
     Phase 3: Backend Build
       └─ Docker build → Artifact Registry push
     Phase 4: Backend Deploy
@@ -244,14 +279,7 @@ Gemini が必要と判断
       └─ Docker build（BACKEND_URL 注入）→ push
     Phase 6: Frontend Deploy
       └─ Cloud Run デプロイ（CPU=1, Mem=512Mi, max=3）
-      └─ URL 出力
 ```
-
-**関連ファイル:**
-- `deploy.sh` — 6フェーズデプロイスクリプト
-- `infra/terraform/main.tf` — GCP リソース定義
-- `backend/Dockerfile` — マルチステージビルド
-- `frontend/Dockerfile` — マルチステージビルド
 
 ---
 
@@ -270,8 +298,8 @@ Gemini が必要と判断
 ### Step 1: リポジトリのクローン
 
 ```bash
-git clone https://github.com/<your-username>/gemini-live-agent-challenge.git
-cd gemini-live-agent-challenge
+git clone https://github.com/buddypia/whiteboard-architect.git
+cd whiteboard-architect
 ```
 
 ### Step 2: 環境変数の設定
@@ -352,29 +380,36 @@ curl http://localhost:8080/health
 
 ```
 backend/
-├── main.py                    # FastAPI + WebSocket エンドポイント
+├── main.py                    # FastAPI + WebSocket エンドポイント（4並列タスク）
 ├── agent.py                   # ADK Agent 定義（Archie）
 ├── config.py                  # 環境変数管理（frozen dataclass）
-├── change_detector.py         # ホワイトボード変化検出
+├── whiteboard_state.py        # 構造化分析データモデル
+├── image_context.py           # 画像状態管理（カメラ vs 静的画像）
 ├── tools/
-│   └── architect_tools.py     # ADK ツール関数 x3
+│   └── architect_tools.py     # ADK ツール関数 x4（3登録 + 1自動生成）
 ├── services/
 │   ├── firestore_service.py   # Firestore 永続化
-│   └── storage_service.py     # GCS アップロード
+│   ├── storage_service.py     # GCS アップロード（サーキットブレーカー付き）
+│   ├── diagram_service.py     # SVGダイアグラム生成（gemini-2.0-flash）
+│   ├── whiteboard_analyzer.py # Perception Layer（gemini-3.1-flash-lite-preview）
+│   ├── translation_service.py # 英→日翻訳（gemini-3.1-flash-lite-preview）
+│   └── live_model_service.py  # モデル可用性プローブ・フォールバック
 ├── requirements.txt
 └── Dockerfile
 ```
 
 ### WebSocket エンドポイント: `/ws/{user_id}/{session_id}`
 
-WebSocket 接続時に 2 つの非同期タスクが並列起動されます:
+WebSocket 接続時に 4 つの非同期タスクが並列起動されます:
 
 | タスク | 方向 | 処理内容 |
 |---|---|---|
 | `upstream_task` | クライアント → Gemini | 音声/映像/テキスト/コントロールを `LiveRequestQueue` に転送 |
 | `downstream_task` | Gemini → クライアント | Gemini イベントを WS メッセージに変換して送信 |
+| `recovery_task` | — | セッション健全性監視、偽barge-in検出、スタック応答検知 |
+| `perception_task` | — | WhiteboardAnalyzer による定期的構造化分析 |
 
-どちらかのタスクが完了（切断等）すると、もう一方もキャンセルされます。
+どちらかの主要タスク（upstream/downstream）が完了すると、全タスクがキャンセルされます。
 
 ### REST エンドポイント
 
@@ -383,15 +418,9 @@ WebSocket 接続時に 2 つの非同期タスクが並列起動されます:
 | `GET` | `/health` | ヘルスチェック（サービス可用性含む） |
 | `GET` | `/api/sessions/{id}/notes` | セッションのレビューノート取得 |
 | `GET` | `/api/sessions/{id}/snapshots` | セッションのスナップショット取得 |
-
-### 変化検出 (`change_detector.py`)
-
-ホワイトボードの大きな変化をプロアクティブに検知:
-
-- フレームを 160x120 グレースケールにリサイズ
-- ピクセル単位で前フレームと比較（閾値: 輝度差 > 30）
-- 変化率 > 5% かつ クールダウン 10秒経過 → 検知
-- 検知時: 「ホワイトボードに大きな変化がありました...」プロンプトを注入
+| `GET` | `/api/snapshots/{session_id}/{snapshot_id}.jpg` | スナップショット画像取得 |
+| `POST` | `/api/sessions/{id}/upload` | 画像アップロード |
+| `DELETE` | `/api/snapshots/{session_id}/{snapshot_id}` | スナップショット削除 |
 
 ### グレースフルデグレード
 
@@ -400,6 +429,7 @@ Firestore/GCS が利用不可の場合:
 - メタデータは ADK セッション状態（メモリ）に保持
 - `local_only` ステータスを返す
 - ヘルスチェックで可用性を報告
+- Storage Service はサーキットブレーカーパターンを実装
 
 ---
 
@@ -413,39 +443,31 @@ frontend/src/
 │   ├── layout.tsx          # ルートレイアウト（lang="ja"、Inter フォント）
 │   ├── page.tsx            # エントリポイント → SessionApp
 │   └── globals.css         # デザインシステム（CSS変数、アニメーション）
-├── components/
+├── components/             # 14 React コンポーネント
 │   ├── SessionApp.tsx      # メインオーケストレーター（状態管理、WS イベントルーティング）
 │   ├── CameraPreview.tsx   # カメラプレビュー + SVG アノテーションオーバーレイ
 │   ├── StatusBar.tsx       # 接続状態、発話インジケーター、mood 表示
-│   ├── TranscriptPanel.tsx # チャット UI（自動スクロール、ストリーミングマージ）
+│   ├── TranscriptPanel.tsx # バイリンガルチャット UI（英語+日本語、自動スクロール）
 │   ├── ReviewNotesPanel.tsx # レビューノート表示（重要度別色分け）
+│   ├── DiagramPanel.tsx    # 生成ダイアグラム表示（PiPサムネイル + 拡大モーダル）
+│   ├── WhiteboardAnalysisPanel.tsx # 構造化分析結果表示
 │   ├── SessionControls.tsx # 開始/停止、スナップショットボタン
 │   ├── SnapshotGallery.tsx # サムネイルギャラリー
+│   ├── SnapshotReviewView.tsx # 単一スナップショット詳細レビュー
+│   ├── AnnotationOverlay.tsx # SVGアノテーション描画
+│   ├── ImageUploadZone.tsx # 画像アップロードUI
+│   ├── RadarChart.tsx      # レビューサマリーレーダーチャート
 │   └── SessionSummary.tsx  # セッション終了後サマリー（レーダーチャート、MD エクスポート）
-├── hooks/
+├── hooks/                  # 5 カスタムフック
 │   ├── useWebSocket.ts     # WS 接続管理（指数バックオフ再接続）
 │   ├── useAudioCapture.ts  # マイク → AudioWorklet → PCM16
 │   ├── useAudioPlayback.ts # PCM24kHz → AudioContext 再生
-│   └── useVideoCapture.ts  # カメラ → canvas → JPEG 1fps
+│   ├── useVideoCapture.ts  # カメラ → canvas → JPEG 1fps
+│   └── useReducedMotion.ts # prefers-reduced-motion 対応
 └── lib/
     ├── types.ts            # 全メッセージ型定義
     ├── constants.ts        # 定数（サンプルレート、FPS 等）
     └── audio-utils.ts      # PCM 変換、base64 変換、RMS 計算
-```
-
-### コンポーネント階層
-
-```
-<RootLayout lang="ja">
-  └── <SessionApp>                    # 全状態管理の中心
-        ├── <StatusBar />             # 接続・発話・mood 表示
-        ├── <CameraPreview />         # 映像 + アノテーション SVG
-        ├── <TranscriptPanel />       # 会話ログ
-        ├── <ReviewNotesPanel />      # レビューノート一覧
-        ├── <SessionControls />       # 操作ボタン
-        ├── <SnapshotGallery />       # スナップショットサムネイル
-        ├── Toast 通知               # ツール実行結果のフィードバック
-        └── <SessionSummary />        # 終了後モーダル
 ```
 
 ### 状態管理
@@ -483,6 +505,10 @@ frontend/src/
 | `WS_RECONNECT_MAX_DELAY` | 30000 ms | WS 再接続最大遅延 |
 | `BACKPRESSURE_THRESHOLD` | 65536 bytes | WS 送信スキップ閾値 |
 | `ANNOTATION_EXPIRE_MS` | 30000 ms | アノテーション表示時間 |
+| `TOAST_DISPLAY_MS` | 5000 ms | トースト通知表示時間 |
+| `TRANSCRIPT_MERGE_WINDOW_MS` | 2000 ms | トランスクリプト結合ウィンドウ |
+| `BARGE_IN_RESET_MS` | 1500 ms | バージインリセット時間 |
+| `MOOD_RESET_MS` | 8000 ms | ムードリセット時間 |
 
 ---
 
@@ -494,9 +520,6 @@ frontend/src/
 ws://localhost:8080/ws/{userId}/{sessionId}
 ```
 
-- `userId`: クライアント生成の UUID
-- `sessionId`: セッション単位の UUID
-
 ### クライアント → サーバー（`ClientMessage`）
 
 | type | 追加フィールド | 用途 |
@@ -504,32 +527,25 @@ ws://localhost:8080/ws/{userId}/{sessionId}
 | `audio` | `data: string` (base64 PCM16 16kHz) | マイク音声ストリーム |
 | `video` | `data: string` (base64 JPEG) | カメラフレーム (1fps) |
 | `text` | `text: string` | テキスト入力 |
-| `control` | `action: string` | `"save_snapshot"` 等 |
+| `control` | `action: string` | `"save_snapshot"`, `"generate_diagram"`, `"review_snapshot"`, `"back_to_live"` |
 
 ### サーバー → クライアント（`ServerMessage`）
 
 | type | 追加フィールド | 用途 |
 |---|---|---|
 | `audio` | `data: string` (base64 PCM 24kHz) | AI 音声出力 |
-| `transcript` | `role: "user"\|"agent"`, `text: string` | 文字起こし |
+| `transcript` | `role: "user"\|"agent"\|"thought"`, `text: string` | 文字起こし |
 | `interrupted` | — | Barge-in 検出 |
 | `turn_complete` | — | AI 発話完了 |
 | `tool_call` | `name: string`, `result: object` | ツール実行結果 |
-| `annotation` | `x, y, label, annotation_type, severity, ...` | 映像オーバーレイ |
-| `agent_state` | `mood: AgentMood` | エージェント感情状態 |
-
-### メッセージシーケンス例
-
-```
-1. [Client] → {type: "audio", data: "..."}    # 連続送信
-2. [Client] → {type: "video", data: "..."}    # 1fps
-3. [Server] → {type: "transcript", role: "user", text: "ここにDBを..."}
-4. [Server] → {type: "audio", data: "..."}    # AI応答音声
-5. [Server] → {type: "annotation", x: 0.3, y: 0.5, label: "DB", ...}
-6. [Server] → {type: "transcript", role: "agent", text: "このDBは..."}
-7. [Server] → {type: "tool_call", name: "save_review_note", result: {...}}
-8. [Server] → {type: "turn_complete"}
-```
+| `annotation` | `x, y, label, annotation_type, severity, ...` | 映像オーバーレイ（自動生成） |
+| `agent_state` | `mood: AgentMood`, `trigger: string` | エージェント感情状態 |
+| `snapshot_saved` | `snapshot_id, description` | スナップショット保存完了 |
+| `diagram_generating` | `diagram_id` | ダイアグラム生成開始 |
+| `diagram_generated` | `diagram_id, url` | ダイアグラム生成完了 |
+| `diagram_error` | `diagram_id, error` | ダイアグラム生成失敗 |
+| `whiteboard_analysis` | `components, connections, issues` | 構造化分析結果 |
+| `error` | `message` | エラー通知 |
 
 ---
 
@@ -537,10 +553,10 @@ ws://localhost:8080/ws/{userId}/{sessionId}
 
 ### ペルソナ
 
-- **名前:** Archie（アーキー）
+- **名前:** Archie（アーチー）
 - **役割:** 20年以上のキャリアを持つシニアクラウドアーキテクト
-- **声:** Aoede（日本語女性ボイス）
-- **言語:** 日本語のみ（英語は一切使用しない）
+- **声:** Aoede
+- **言語:** **英語のみ**（system promptで強制。日本語はTranslationServiceで提供）
 - **トーン:** 穏やか、教授的、簡潔（聞かれない限り 2-4 文）
 
 ### 感情状態（AgentMood）
@@ -566,26 +582,22 @@ ws://localhost:8080/ws/{userId}/{sessionId}
 ### グラウンディングルール（ハルシネーション対策）
 
 - **見えるものだけコメント**: カメラに映っていないコンポーネントについて言及しない
-- **推測しない**: 不明な箇所は「ここは何ですか？」と質問する
+- **推測しない**: 不明な箇所は「What is this?」と質問する
 - **ツールで記録**: 重要な指摘は `save_review_note` で必ず記録
 
 ### モデル設定
 
 ```python
-model = "gemini-2.5-flash-native-audio-latest"
-# 必要なら GEMINI_MODEL_NAME で特定バージョンへ pin 可能
+model = "gemini-2.5-flash-native-audio-preview-09-2025"
+# env GEMINI_MODEL_NAME で上書き可能
+# フォールバック: GEMINI_FALLBACK_MODEL_NAMES (CSV)
 voice = "Aoede"
-language_code = "ja-JP"
-thinking_budget = 1024  # レイテンシ安定化のため制限
+language = "English" (system prompt enforced)
 ```
 
 ---
 
 ## 8. データフロー
-
-### データフロー図
-
-![Data Flow](./data-flow.svg)
 
 ### Firestore コレクション構造
 
@@ -628,14 +640,6 @@ sessions/{session_id}
 
 ## 9. インフラ・デプロイ
 
-### ローカル開発（Docker Compose）
-
-```yaml
-services:
-  backend:   # :8080, ホットリロード有効
-  frontend:  # :3000, depends_on backend
-```
-
 ### GCP アーキテクチャ
 
 ```
@@ -658,43 +662,6 @@ IAM
     └── roles/storage.objectAdmin
 ```
 
-### デプロイ手順
-
-#### 自動デプロイ（推奨）
-
-```bash
-# 1. 環境変数設定
-cp .env.example .env && vi .env
-
-# 2. デプロイスクリプト実行
-chmod +x deploy.sh
-./deploy.sh
-```
-
-#### Terraform 単体
-
-```bash
-cd infra/terraform
-cp terraform.tfvars.example terraform.tfvars
-# terraform.tfvars を編集
-terraform init
-terraform apply
-```
-
-#### 手動デプロイ
-
-```bash
-# Backend
-cd backend
-gcloud run deploy whiteboard-backend \
-  --source . --region us-central1 --allow-unauthenticated
-
-# Frontend (環境変数にデプロイ済み Backend URL を設定)
-cd frontend
-gcloud run deploy whiteboard-frontend \
-  --source . --region us-central1 --allow-unauthenticated
-```
-
 ### 重要な Cloud Run 設定
 
 | 設定 | 値 | 理由 |
@@ -709,25 +676,31 @@ gcloud run deploy whiteboard-frontend \
 ## 10. ファイル構成と責務マップ
 
 ```
-gemini-live-agent-challenge/
+whiteboard-architect/
 ├── .env.example                    # 環境変数テンプレート
 ├── .gitignore                      # Git 除外ルール
 ├── CLAUDE.md                       # AI 開発コンテキスト
-├── README.md                       # プロジェクト概要
+├── README.md                       # プロジェクト概要（英語）
+├── README.ja.md                    # プロジェクト概要（日本語）
 ├── package.json                    # ルートスクリプト（concurrently）
 ├── docker-compose.yml              # ローカル開発環境
 ├── deploy.sh                       # GCP 自動デプロイスクリプト
 │
 ├── backend/                        # Python バックエンド
-│   ├── main.py                     # FastAPI + WS エンドポイント
+│   ├── main.py                     # FastAPI + WS エンドポイント（4並列タスク）
 │   ├── agent.py                    # ADK Agent "Archie" 定義
 │   ├── config.py                   # 環境変数管理
-│   ├── change_detector.py          # ホワイトボード変化検出
+│   ├── whiteboard_state.py         # 構造化分析データモデル
+│   ├── image_context.py            # 画像状態管理
 │   ├── tools/
-│   │   └── architect_tools.py      # ADK ツール（snapshot, note, annotation）
+│   │   └── architect_tools.py      # ADK ツール（snapshot, note, diagram + annotation自動生成）
 │   ├── services/
 │   │   ├── firestore_service.py    # Firestore CRUD
-│   │   └── storage_service.py      # GCS アップロード
+│   │   ├── storage_service.py      # GCS アップロード（サーキットブレーカー）
+│   │   ├── diagram_service.py      # SVGダイアグラム生成
+│   │   ├── whiteboard_analyzer.py  # Perception Layer
+│   │   ├── translation_service.py  # 英→日翻訳
+│   │   └── live_model_service.py   # モデル可用性プローブ
 │   ├── requirements.txt            # Python 依存
 │   └── Dockerfile                  # マルチステージビルド
 │
@@ -737,24 +710,9 @@ gemini-live-agent-challenge/
 │   │   │   ├── layout.tsx          # ルートレイアウト
 │   │   │   ├── page.tsx            # エントリポイント
 │   │   │   └── globals.css         # デザインシステム
-│   │   ├── components/             # React コンポーネント
-│   │   │   ├── SessionApp.tsx      # メインオーケストレーター
-│   │   │   ├── CameraPreview.tsx   # カメラ + アノテーション
-│   │   │   ├── StatusBar.tsx       # ヘッダー状態表示
-│   │   │   ├── TranscriptPanel.tsx # 会話ログ
-│   │   │   ├── ReviewNotesPanel.tsx # レビューノート
-│   │   │   ├── SessionControls.tsx # 操作ボタン
-│   │   │   ├── SnapshotGallery.tsx # スナップショット
-│   │   │   └── SessionSummary.tsx  # 終了後サマリー
-│   │   ├── hooks/                  # カスタムフック
-│   │   │   ├── useWebSocket.ts     # WS 接続管理
-│   │   │   ├── useAudioCapture.ts  # マイク入力
-│   │   │   ├── useAudioPlayback.ts # AI 音声再生
-│   │   │   └── useVideoCapture.ts  # カメラ入力
+│   │   ├── components/             # React コンポーネント（14ファイル）
+│   │   ├── hooks/                  # カスタムフック（5ファイル）
 │   │   └── lib/                    # ユーティリティ
-│   │       ├── types.ts            # 型定義
-│   │       ├── constants.ts        # 定数
-│   │       └── audio-utils.ts      # 音声変換
 │   ├── package.json                # Node.js 依存
 │   ├── tsconfig.json               # TypeScript 設定
 │   ├── next.config.ts              # Next.js 設定（standalone）
@@ -772,11 +730,10 @@ gemini-live-agent-challenge/
     ├── specification.md            # 技術仕様書
     ├── feature-definition.md       # 機能定義書
     ├── submission.md               # Devpost 提出用テキスト
-    ├── architecture.svg            # アーキテクチャ図（SVG）
-    ├── architecture-diagram.svg    # アーキテクチャ図（日本語版）
-    ├── architecture.png            # アーキテクチャ図（PNG）
-    ├── pipeline-overview.svg       # パイプライン全体図
-    └── data-flow.svg               # データフロー図
+    ├── architecture-diagram.svg    # アーキテクチャ図
+    ├── data-flow.svg               # データフロー図
+    ├── data-flow-sequence.svg      # シーケンス図
+    └── deployment-pipeline.svg     # デプロイメントパイプライン
 ```
 
 ---
@@ -788,13 +745,15 @@ gemini-live-agent-challenge/
 | 症状 | 原因 | 対処 |
 |---|---|---|
 | WS 接続が切れる | Cloud Run のタイムアウト | `timeout: 3600s` を確認、session affinity 有効化 |
-| AI が英語で応答する | システムプロンプトの言語指定不足 | `agent.py` の instruction に日本語明記済み |
+| AI が日本語で応答する | システムプロンプトの言語指定不備 | `agent.py` の instruction に英語明記済み |
 | 音声が途切れる | バックプレッシャー | `BACKPRESSURE_THRESHOLD` 調整、ネットワーク確認 |
 | カメラが映らない | ブラウザ権限 | HTTPS（または localhost）でアクセス、権限許可 |
 | Firestore エラー | 認証情報不足 | `GOOGLE_CLOUD_PROJECT` 設定、`gcloud auth` 実行 |
 | ツール呼び出しが失敗 | モデルバージョン | `-09-2025` を使用（`-12-2025` にバグあり） |
 | Barge-in が遅い | クライアント VAD 閾値 | `useAudioCapture` の RMS 閾値を調整 |
 | Docker build が遅い | レイヤーキャッシュ | `requirements.txt`/`package.json` を先に COPY |
+| ダイアグラム生成が失敗 | モデルレート制限 | DiagramService のエラーログ確認 |
+| 分析が動かない | ANALYSIS_ENABLED=false | `.env` で `ANALYSIS_ENABLED=true` に設定 |
 
 ### ログ確認
 
@@ -807,20 +766,13 @@ docker-compose logs -f frontend
 gcloud run services logs read whiteboard-backend --region us-central1
 ```
 
-### デバッグ Tips
-
-- バックエンドの `main.py` に `logging.DEBUG` レベルのログが出力される
-- ブラウザの DevTools > Console で WS メッセージを確認
-- ヘルスチェック: `curl localhost:8080/health` でサービス可用性を確認
-- ADK テスト: `backend/test_live_model_service.py` でモデルサービスのユニットテスト実行
-
 ---
 
 ## 12. ハッカソン提出チェックリスト
 
 ### 必須技術要件
 
-- [x] Gemini モデル使用（`gemini-2.5-flash-native-audio-latest`）
+- [x] Gemini モデル使用（`gemini-2.5-flash-native-audio-preview-09-2025`）
 - [x] Google ADK（Agent Development Kit）使用
 - [x] Google Cloud サービス（Cloud Run + Firestore + Storage）
 - [x] Gemini Live API（bidi-streaming 実装）
@@ -838,14 +790,6 @@ gcloud run services logs read whiteboard-backend --region us-central1
 - [x] Terraform IaC（`infra/terraform/`）→ +0.2
 - [ ] ハッカソン参加ブログ/動画 → +0.6
 - [ ] GDG メンバーシップ → +0.2
-
-### 採点基準
-
-| 基準 | 配点 | 重要ポイント |
-|---|---|---|
-| Innovation & Multimodal UX | 40% | Barge-in の自然さ、Live 性、Archie のペルソナ |
-| Technical Implementation | 30% | ADK 活用度、Cloud Run 堅牢性、ハルシネーション対策 |
-| Demo & Presentation | 30% | 問題/解決の明確さ、実際のソフトウェア動作 |
 
 ---
 

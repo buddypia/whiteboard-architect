@@ -22,6 +22,9 @@
     <marker id="aOrange" markerWidth="7" markerHeight="5" refX="6" refY="2.5" orient="auto">
       <polygon points="0 0, 7 2.5, 0 5" fill="#f59e0b"/>
     </marker>
+    <marker id="aCyan" markerWidth="7" markerHeight="5" refX="6" refY="2.5" orient="auto">
+      <polygon points="0 0, 7 2.5, 0 5" fill="#06b6d4"/>
+    </marker>
   </defs>
 
   <style>
@@ -70,7 +73,7 @@
   <line x1="930" y1="105" x2="930" y2="1080" stroke="#3d2f10" stroke-width="1" stroke-dasharray="4,4"/>
 
   <!-- ===== PHASE 1: Session Start ===== -->
-  <rect x="20" y="120" width="1010" height="155" rx="8" fill="#111827" stroke="#1f2937" stroke-width="0.5"/>
+  <rect x="20" y="120" width="1010" height="160" rx="8" fill="#111827" stroke="#1f2937" stroke-width="0.5"/>
   <text x="35" y="140" class="t phase" fill="#3b82f6">1. SESSION START</text>
 
   <!-- Click start -->
@@ -93,78 +96,78 @@
   <line x1="530" y1="235" x2="930" y2="235" stroke="#f59e0b" stroke-width="1" stroke-dasharray="4,3" marker-end="url(#aOrange)"/>
   <text x="730" y="250" text-anchor="middle" class="t note">create_session_record (Firestore)</text>
 
-  <text x="530" y="270" class="t note" fill="#6b7280">asyncio.gather(upstream_task, downstream_task)</text>
+  <text x="530" y="273" class="t note" fill="#6b7280">4 parallel tasks: upstream + downstream + recovery + perception</text>
 
   <!-- ===== PHASE 2: Normal Conversation ===== -->
-  <rect x="20" y="285" width="1010" height="260" rx="8" fill="#111827" stroke="#1f2937" stroke-width="0.5"/>
-  <text x="35" y="305" class="t phase" fill="#10b981">2. NORMAL CONVERSATION FLOW</text>
+  <rect x="20" y="290" width="1010" height="260" rx="8" fill="#111827" stroke="#1f2937" stroke-width="0.5"/>
+  <text x="35" y="310" class="t phase" fill="#10b981">2. NORMAL CONVERSATION FLOW</text>
 
   <!-- User speaks -->
-  <line x1="120" y1="320" x2="310" y2="320" stroke="#3b82f6" stroke-width="1.5" marker-end="url(#aBlue)"/>
-  <text x="215" y="315" text-anchor="middle" class="t msg">Microphone audio</text>
+  <line x1="120" y1="325" x2="310" y2="325" stroke="#3b82f6" stroke-width="1.5" marker-end="url(#aBlue)"/>
+  <text x="215" y="320" text-anchor="middle" class="t msg">Microphone audio</text>
 
   <!-- Audio to backend -->
-  <line x1="310" y1="340" x2="530" y2="340" stroke="#4b5563" stroke-width="1.5" marker-end="url(#aDown)"/>
-  <text x="420" y="335" text-anchor="middle" class="t mono" fill="#d1d5db">{type:"audio", data:"base64..."}</text>
+  <line x1="310" y1="345" x2="530" y2="345" stroke="#4b5563" stroke-width="1.5" marker-end="url(#aDown)"/>
+  <text x="420" y="340" text-anchor="middle" class="t mono" fill="#d1d5db">{type:"audio", data:"base64..."}</text>
 
   <!-- Audio to Gemini -->
-  <line x1="530" y1="360" x2="740" y2="360" stroke="#8b5cf6" stroke-width="1.5" marker-end="url(#aPurple)"/>
-  <text x="635" y="355" text-anchor="middle" class="t msg">PCM blob via LiveRequestQueue</text>
+  <line x1="530" y1="365" x2="740" y2="365" stroke="#8b5cf6" stroke-width="1.5" marker-end="url(#aPurple)"/>
+  <text x="635" y="360" text-anchor="middle" class="t msg">PCM blob via LiveRequestQueue</text>
 
   <!-- Camera frame -->
-  <line x1="120" y1="385" x2="310" y2="385" stroke="#3b82f6" stroke-width="1" marker-end="url(#aBlue)"/>
-  <text x="215" y="380" text-anchor="middle" class="t msg">Camera frame (1fps)</text>
-  <line x1="310" y1="395" x2="530" y2="395" stroke="#4b5563" stroke-width="1" marker-end="url(#aDown)"/>
-  <text x="420" y="410" text-anchor="middle" class="t mono" fill="#9ca3af">{type:"video", data:"base64..."}</text>
-  <line x1="530" y1="420" x2="740" y2="420" stroke="#8b5cf6" stroke-width="1" marker-end="url(#aPurple)"/>
-  <text x="635" y="415" text-anchor="middle" class="t note">JPEG blob</text>
+  <line x1="120" y1="390" x2="310" y2="390" stroke="#3b82f6" stroke-width="1" marker-end="url(#aBlue)"/>
+  <text x="215" y="385" text-anchor="middle" class="t msg">Camera frame (1fps)</text>
+  <line x1="310" y1="400" x2="530" y2="400" stroke="#4b5563" stroke-width="1" marker-end="url(#aDown)"/>
+  <text x="420" y="415" text-anchor="middle" class="t mono" fill="#9ca3af">{type:"video", data:"base64..."}</text>
+  <line x1="530" y1="425" x2="740" y2="425" stroke="#8b5cf6" stroke-width="1" marker-end="url(#aPurple)"/>
+  <text x="635" y="420" text-anchor="middle" class="t note">JPEG blob</text>
 
   <!-- Gemini responds with audio -->
-  <line x1="740" y1="445" x2="530" y2="445" stroke="#8b5cf6" stroke-width="1.5" marker-end="url(#aPurple)"/>
-  <text x="635" y="440" text-anchor="middle" class="t msgBold" fill="#c4b5fd">Audio response (PCM 24kHz)</text>
+  <line x1="740" y1="450" x2="530" y2="450" stroke="#8b5cf6" stroke-width="1.5" marker-end="url(#aPurple)"/>
+  <text x="635" y="445" text-anchor="middle" class="t msgBold" fill="#c4b5fd">Audio response (PCM 24kHz)</text>
 
-  <line x1="530" y1="460" x2="310" y2="460" stroke="#4b5563" stroke-width="1.5" marker-end="url(#aDown)"/>
-  <text x="420" y="475" text-anchor="middle" class="t mono" fill="#d1d5db">{type:"audio", data:"base64..."}</text>
+  <line x1="530" y1="465" x2="310" y2="465" stroke="#4b5563" stroke-width="1.5" marker-end="url(#aDown)"/>
+  <text x="420" y="480" text-anchor="middle" class="t mono" fill="#d1d5db">{type:"audio", data:"base64..."}</text>
 
-  <line x1="310" y1="485" x2="120" y2="485" stroke="#3b82f6" stroke-width="1.5" marker-end="url(#aBlue)"/>
-  <text x="215" y="480" text-anchor="middle" class="t msg">Gapless PCM playback</text>
+  <line x1="310" y1="490" x2="120" y2="490" stroke="#3b82f6" stroke-width="1.5" marker-end="url(#aBlue)"/>
+  <text x="215" y="485" text-anchor="middle" class="t msg">Gapless PCM playback</text>
 
   <!-- Transcript -->
-  <line x1="740" y1="505" x2="530" y2="505" stroke="#8b5cf6" stroke-width="1" marker-end="url(#aPurple)"/>
-  <text x="635" y="500" text-anchor="middle" class="t note">Transcript text</text>
-  <line x1="530" y1="515" x2="310" y2="515" stroke="#4b5563" stroke-width="1" marker-end="url(#aDown)"/>
-  <text x="420" y="530" text-anchor="middle" class="t mono" fill="#9ca3af">{type:"transcript", role:"agent"}</text>
+  <line x1="740" y1="510" x2="530" y2="510" stroke="#8b5cf6" stroke-width="1" marker-end="url(#aPurple)"/>
+  <text x="635" y="505" text-anchor="middle" class="t note">Transcript text</text>
+  <line x1="530" y1="520" x2="310" y2="520" stroke="#4b5563" stroke-width="1" marker-end="url(#aDown)"/>
+  <text x="420" y="535" text-anchor="middle" class="t mono" fill="#9ca3af">{type:"transcript", role:"agent"}</text>
 
   <!-- ===== PHASE 3: Barge-in ===== -->
-  <rect x="20" y="555" width="1010" height="175" rx="8" fill="#1a1015" stroke="#7f1d1d" stroke-width="0.5"/>
-  <text x="35" y="575" class="t phase" fill="#ef4444">3. BARGE-IN (INTERRUPTION)</text>
+  <rect x="20" y="560" width="1010" height="170" rx="8" fill="#1a1015" stroke="#7f1d1d" stroke-width="0.5"/>
+  <text x="35" y="580" class="t phase" fill="#ef4444">3. BARGE-IN (INTERRUPTION)</text>
 
   <!-- AI speaking -->
-  <line x1="530" y1="590" x2="310" y2="590" stroke="#4b5563" stroke-width="1.5" marker-end="url(#aDown)"/>
-  <text x="420" y="585" text-anchor="middle" class="t msg" fill="#9ca3af">...AI audio playing...</text>
+  <line x1="530" y1="595" x2="310" y2="595" stroke="#4b5563" stroke-width="1.5" marker-end="url(#aDown)"/>
+  <text x="420" y="590" text-anchor="middle" class="t msg" fill="#9ca3af">...AI audio playing...</text>
 
   <!-- User interrupts -->
-  <line x1="120" y1="610" x2="310" y2="610" stroke="#ef4444" stroke-width="2" marker-end="url(#aRed)"/>
-  <text x="215" y="605" text-anchor="middle" class="t msgBold" fill="#fca5a5">User starts speaking</text>
+  <line x1="120" y1="615" x2="310" y2="615" stroke="#ef4444" stroke-width="2" marker-end="url(#aRed)"/>
+  <text x="215" y="610" text-anchor="middle" class="t msgBold" fill="#fca5a5">User starts speaking</text>
 
   <!-- VAD detection -->
-  <rect x="265" y="617" width="90" height="18" rx="3" fill="#2a1515" stroke="#7f1d1d" stroke-width="0.5"/>
-  <text x="310" y="630" text-anchor="middle" class="t mono" fill="#fca5a5">RMS VAD</text>
+  <rect x="265" y="622" width="90" height="18" rx="3" fill="#2a1515" stroke="#7f1d1d" stroke-width="0.5"/>
+  <text x="310" y="635" text-anchor="middle" class="t mono" fill="#fca5a5">RMS VAD</text>
 
   <!-- stopPlayback -->
-  <rect x="268" y="640" width="85" height="18" rx="3" fill="#2a1515" stroke="#7f1d1d" stroke-width="0.5"/>
-  <text x="310" y="653" text-anchor="middle" class="t mono" fill="#fca5a5">stopPlayback</text>
+  <rect x="268" y="645" width="85" height="18" rx="3" fill="#2a1515" stroke="#7f1d1d" stroke-width="0.5"/>
+  <text x="310" y="658" text-anchor="middle" class="t mono" fill="#fca5a5">stopPlayback</text>
 
   <!-- interrupted from Gemini -->
-  <line x1="740" y1="665" x2="530" y2="665" stroke="#ef4444" stroke-width="1.5" marker-end="url(#aRed)"/>
-  <text x="635" y="660" text-anchor="middle" class="t msgBold" fill="#fca5a5">interrupted event</text>
+  <line x1="740" y1="670" x2="530" y2="670" stroke="#ef4444" stroke-width="1.5" marker-end="url(#aRed)"/>
+  <text x="635" y="665" text-anchor="middle" class="t msgBold" fill="#fca5a5">interrupted event</text>
 
-  <line x1="530" y1="680" x2="310" y2="680" stroke="#ef4444" stroke-width="1.5" marker-end="url(#aRed)"/>
-  <text x="420" y="695" text-anchor="middle" class="t mono" fill="#fca5a5">{type:"interrupted"}</text>
+  <line x1="530" y1="685" x2="310" y2="685" stroke="#ef4444" stroke-width="1.5" marker-end="url(#aRed)"/>
+  <text x="420" y="700" text-anchor="middle" class="t mono" fill="#fca5a5">{type:"interrupted"}</text>
 
-  <!-- Mute window -->
-  <rect x="268" y="700" width="85" height="18" rx="3" fill="#2a1515" stroke="#7f1d1d" stroke-width="0.5"/>
-  <text x="310" y="713" text-anchor="middle" class="t mono" fill="#fca5a5">Mute 500ms</text>
+  <!-- Grace period -->
+  <rect x="260" y="705" width="105" height="18" rx="3" fill="#2a1515" stroke="#7f1d1d" stroke-width="0.5"/>
+  <text x="312" y="718" text-anchor="middle" class="t mono" fill="#fca5a5">Grace 400ms</text>
 
   <!-- ===== PHASE 4: Tool Calls ===== -->
   <rect x="20" y="740" width="1010" height="170" rx="8" fill="#111827" stroke="#1f2937" stroke-width="0.5"/>
@@ -194,31 +197,32 @@
   <line x1="530" y1="890" x2="310" y2="890" stroke="#10b981" stroke-width="1" marker-end="url(#aGreen)"/>
   <text x="420" y="905" text-anchor="middle" class="t mono" fill="#6ee7b7">{type:"agent_state", mood:"concerned"}</text>
 
-  <!-- ===== PHASE 5: Change Detection ===== -->
+  <!-- ===== PHASE 5: Perception Layer ===== -->
   <rect x="20" y="920" width="1010" height="155" rx="8" fill="#111827" stroke="#1f2937" stroke-width="0.5"/>
-  <text x="35" y="940" class="t phase" fill="#8b5cf6">5. AUTONOMOUS CHANGE DETECTION</text>
+  <text x="35" y="940" class="t phase" fill="#06b6d4">5. PERCEPTION LAYER (WHITEBOARD ANALYZER)</text>
 
   <!-- Video frame -->
   <line x1="310" y1="960" x2="530" y2="960" stroke="#4b5563" stroke-width="1" marker-end="url(#aDown)"/>
   <text x="420" y="955" text-anchor="middle" class="t mono" fill="#9ca3af">{type:"video"}</text>
 
-  <!-- ChangeDetector -->
-  <rect x="485" y="967" width="110" height="22" rx="3" fill="#1c2a20" stroke="#065f46" stroke-width="0.5"/>
-  <text x="540" y="982" text-anchor="middle" class="t mono" fill="#34d399">ChangeDetector</text>
+  <!-- WhiteboardAnalyzer -->
+  <rect x="485" y="967" width="130" height="22" rx="3" fill="#0c1927" stroke="#164e63" stroke-width="0.5"/>
+  <text x="550" y="982" text-anchor="middle" class="t mono" fill="#22d3ee">WB Analyzer</text>
 
-  <text x="605" y="982" class="t note" fill="#6b7280">diff > 5% &amp;&amp; cooldown &gt; 10s &amp;&amp; agent_idle</text>
+  <text x="625" y="982" class="t note" fill="#6b7280">gemini-3.1-flash-lite every 10s</text>
 
-  <!-- Inject prompt -->
+  <!-- Inject analysis context -->
   <line x1="530" y1="1000" x2="740" y2="1000" stroke="#8b5cf6" stroke-width="1.5" marker-end="url(#aPurple)"/>
-  <text x="635" y="995" text-anchor="middle" class="t msg" fill="#c4b5fd">"Whiteboard changed - please comment"</text>
+  <text x="635" y="995" text-anchor="middle" class="t msg" fill="#c4b5fd">[Background Analysis] context inject</text>
+
+  <!-- Annotations + analysis to frontend -->
+  <line x1="530" y1="1020" x2="310" y2="1020" stroke="#06b6d4" stroke-width="1.5" marker-end="url(#aCyan)"/>
+  <text x="420" y="1035" text-anchor="middle" class="t mono" fill="#67e8f9">{type:"whiteboard_analysis"} + {type:"annotation"}</text>
 
   <!-- AI auto-response -->
-  <line x1="740" y1="1020" x2="530" y2="1020" stroke="#8b5cf6" stroke-width="1.5" marker-end="url(#aPurple)"/>
-  <text x="635" y="1015" text-anchor="middle" class="t msgBold" fill="#c4b5fd">Autonomous audio response</text>
+  <line x1="740" y1="1045" x2="530" y2="1045" stroke="#8b5cf6" stroke-width="1.5" marker-end="url(#aPurple)"/>
+  <text x="635" y="1040" text-anchor="middle" class="t msgBold" fill="#c4b5fd">Autonomous audio commentary</text>
 
-  <line x1="530" y1="1035" x2="310" y2="1035" stroke="#4b5563" stroke-width="1.5" marker-end="url(#aDown)"/>
-  <text x="420" y="1050" text-anchor="middle" class="t mono" fill="#d1d5db">{type:"audio"} + {type:"transcript"}</text>
-
-  <line x1="310" y1="1060" x2="120" y2="1060" stroke="#3b82f6" stroke-width="1.5" marker-end="url(#aBlue)"/>
-  <text x="215" y="1055" text-anchor="middle" class="t msg">AI proactively comments on changes</text>
+  <line x1="530" y1="1060" x2="310" y2="1060" stroke="#4b5563" stroke-width="1.5" marker-end="url(#aDown)"/>
+  <text x="420" y="1075" text-anchor="middle" class="t mono" fill="#d1d5db">{type:"audio"} + {type:"transcript"}</text>
 </svg>

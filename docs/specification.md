@@ -3,7 +3,7 @@
 > **プロジェクト:** Whiteboard Architect
 > **ハッカソン:** Gemini Live Agent Challenge（Live Agents部門）
 > **締切:** 2026年3月16日 17:00 PT
-> **最終更新:** 2026-03-01
+> **最終更新:** 2026-03-17
 
 ---
 
@@ -25,6 +25,8 @@
 - **自然な音声会話:** 文字入力不要。マイクで話すだけでインタラクティブなレビューが可能
 - **Barge-in対応:** ユーザーが話し始めたらAIは即座に停止し、自然な会話を実現
 - **自動ドキュメント化:** 重要な発見はノートとして自動保存、後から参照可能
+- **バックグラウンド構造化分析:** 別モデルによる定期的深層分析で、ライブ会話を補完
+- **自動ダイアグラム生成:** 手描きスケッチをプロフェッショナルなSVGに変換
 
 ---
 
@@ -32,7 +34,7 @@
 
 | 要件 | 対応実装 | 状態 |
 |------|---------|------|
-| Gemini モデル使用 | `gemini-2.5-flash-native-audio-latest` | ✅ |
+| Gemini モデル使用 | `gemini-2.5-flash-native-audio-preview-09-2025` | ✅ |
 | Google GenAI SDK または ADK | Google ADK (`google-adk`) | ✅ |
 | Google Cloud サービス最低1つ | Cloud Run + Firestore + Cloud Storage | ✅ |
 | Gemini Live API（bidi-streaming） | `runner.run_live()` + `LiveRequestQueue` | ✅ |
@@ -48,7 +50,7 @@
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                        Frontend (Next.js :3000)                  │
+│                        Frontend (Next.js 16 :3000)               │
 │                                                                   │
 │  SessionApp.tsx                                                   │
 │  ├── useWebSocket     → ws://backend/ws/{userId}/{sessionId}     │
@@ -63,17 +65,29 @@
 │                                                                   │
 │  /ws/{user_id}/{session_id}                                       │
 │  ├── upstream_task   : WS → LiveRequestQueue → Gemini Live API   │
-│  └── downstream_task : Gemini Live API → WS                      │
+│  ├── downstream_task : Gemini Live API → WS                      │
+│  ├── recovery_task   : セッション健全性監視・偽barge-in検出       │
+│  └── perception_task : WhiteboardAnalyzer → 構造化分析           │
 │                                                                   │
 │  ADK Runner                                                       │
 │  └── architect_agent ("Archie")                                   │
 │        ├── save_whiteboard_snapshot (tool)                        │
-│        └── save_review_note (tool)                                │
+│        ├── save_review_note (tool)                                │
+│        └── generate_diagram (tool)                                │
+│                                                                   │
+│  Services                                                         │
+│  ├── DiagramService      : gemini-2.0-flash でSVG生成            │
+│  ├── WhiteboardAnalyzer  : gemini-3.1-flash-lite-preview で分析  │
+│  ├── TranslationService  : gemini-3.1-flash-lite-preview で翻訳  │
+│  └── LiveModelService    : モデル可用性プローブ                   │
 │                                                                   │
 │  REST API                                                         │
 │  ├── GET /health                                                  │
 │  ├── GET /api/sessions/{id}/notes                                 │
-│  └── GET /api/sessions/{id}/snapshots                            │
+│  ├── GET /api/sessions/{id}/snapshots                            │
+│  ├── GET /api/snapshots/{session_id}/{snapshot_id}.jpg           │
+│  ├── POST /api/sessions/{id}/upload                              │
+│  └── DELETE /api/snapshots/{session_id}/{snapshot_id}            │
 └──────────────────┬───────────────────────┬──────────────────────┘
                    │                       │
         ┌──────────▼──────────┐  ┌────────▼────────────┐
@@ -106,6 +120,20 @@ Gemini → runner.run_live() → base64(PCM 24kHz) → WS → AudioContext → �
 Gemini(function_call) → ADK(tool実行) → function_response → Firestore保存 → WS(tool_call通知)
 ```
 
+**バックグラウンド分析フロー:**
+```
+perception_task → WhiteboardAnalyzer(gemini-3.1-flash-lite-preview) → WhiteboardState
+  → アノテーション自動生成 → WS(annotation)
+  → 分析結果送信 → WS(whiteboard_analysis)
+  → エージェントへコンテキスト注入 → LiveRequestQueue
+```
+
+**ダイアグラム生成フロー:**
+```
+generate_diagram(tool) → DiagramService(gemini-2.0-flash) → SVG生成 → ローカル保存
+  → WS(diagram_generated, url) → フロントエンド: DiagramPanel表示
+```
+
 ---
 
 ## 4. 技術スタック
@@ -115,22 +143,23 @@ Gemini(function_call) → ADK(tool実行) → function_response → Firestore保
 | 技術 | バージョン | 用途 |
 |------|-----------|------|
 | Python | 3.11+ | ランタイム |
-| FastAPI | 最新 | HTTP/WebSocket サーバー |
-| Google ADK (`google-adk`) | 最新 | エージェントフレームワーク |
-| `google-genai` | 最新 | Gemini API クライアント |
-| `google-cloud-firestore` | 最新 | セッション永続化 |
-| `google-cloud-storage` | 最新 | スナップショット保存 |
-| uvicorn | 最新 | ASGI サーバー |
-| python-dotenv | 最新 | 環境変数管理 |
+| FastAPI | >=0.135.1 | HTTP/WebSocket サーバー |
+| Google ADK (`google-adk`) | >=1.27.1 | エージェントフレームワーク |
+| `google-genai` | >=1.67.0 | Gemini API クライアント |
+| `google-cloud-firestore` | >=2.25.0 | セッション永続化 |
+| `google-cloud-storage` | >=3.9.0 | スナップショット保存 |
+| uvicorn | >=0.41.0 | ASGI サーバー |
+| python-dotenv | >=1.2.2 | 環境変数管理 |
+| Pillow | >=12.1.1 | 画像処理 |
 
 ### 4.2 フロントエンド
 
 | 技術 | バージョン | 用途 |
 |------|-----------|------|
-| Next.js | 15+ | フレームワーク |
-| React | 19+ | UI ライブラリ |
+| Next.js | ^16.1.6 | フレームワーク |
+| React | ^19.2.4 | UI ライブラリ |
 | TypeScript | 5+ | 型安全な開発 |
-| Tailwind CSS | 4+ | スタイリング |
+| Tailwind CSS | ^4.2.1 | スタイリング |
 | Web Audio API | ブラウザ標準 | 音声処理 |
 | AudioWorklet | ブラウザ標準 | リアルタイム PCM 変換 |
 | MediaDevices API | ブラウザ標準 | カメラ・マイクアクセス |
@@ -144,7 +173,16 @@ Gemini(function_call) → ADK(tool実行) → function_response → Firestore保
 | Cloud Run v2 | バックエンド・フロントエンドホスティング |
 | Artifact Registry | Docker イメージ管理 |
 
-### 4.4 外部サービス
+### 4.4 AIモデル
+
+| モデル | 用途 | API |
+|--------|------|-----|
+| `gemini-2.5-flash-native-audio-preview-09-2025` | ライブ会話（音声・映像・ツール呼び出し） | Live API |
+| `gemini-3.1-flash-lite-preview` | バックグラウンド分析（Perception Layer） | Standard API |
+| `gemini-3.1-flash-lite-preview` | 英→日翻訳 | Standard API |
+| `gemini-2.0-flash` | SVGダイアグラム生成 | Standard API |
+
+### 4.5 外部サービス
 
 | サービス | 用途 |
 |---------|------|
@@ -189,7 +227,7 @@ ws://{host}/ws/{user_id}/{session_id}
   data: string  // base64エンコードされた JPEG 画像
 }
 ```
-- 解像度: 640 × 480 px
+- 解像度: 640 x 480 px
 - フォーマット: JPEG（quality=0.7）
 - フレームレート: 1 fps（setInterval 1,000ms）
 - data は data URL プレフィックス（`data:image/jpeg;base64,`）を除いたraw base64
@@ -207,10 +245,13 @@ ws://{host}/ws/{user_id}/{session_id}
 ```typescript
 {
   type: "control",
-  action: string  // "save_snapshot"
+  action: string  // "save_snapshot" | "generate_diagram" | "review_snapshot" | "back_to_live"
 }
 ```
 - `action: "save_snapshot"`: エージェントに現在のホワイトボード状態の保存を指示
+- `action: "generate_diagram"`: ダイアグラム生成を開始
+- `action: "review_snapshot"`: スナップショットの詳細レビューモードに切替
+- `action: "back_to_live"`: ライブカメラモードに戻る
 
 ### 5.3 サーバー → クライアント メッセージ
 
@@ -223,19 +264,17 @@ ws://{host}/ws/{user_id}/{session_id}
   data: string  // base64エンコードされた PCM16 24kHz モノラル音声
 }
 ```
-- サンプルレート: 24,000 Hz
-- チャンネル数: 1（モノラル）
-- ビット深度: 16-bit signed integer
 
 #### TranscriptMessage
 ```typescript
 {
   type: "transcript",
-  role: "user" | "agent",
+  role: "user" | "agent" | "thought",
   text: string  // 文字起こしテキスト（ストリーミング）
 }
 ```
 - ストリーミング送信のため、同一ロールの連続メッセージは 2,000ms 以内に結合表示
+- `role: "thought"` はエージェントの内部思考（thinking）
 
 #### InterruptedMessage
 ```typescript
@@ -251,14 +290,92 @@ ws://{host}/ws/{user_id}/{session_id}
   type: "turn_complete"
 }
 ```
-- AI の発話ターン完了時に送信
 
 #### ToolCallMessage
 ```typescript
 {
   type: "tool_call",
-  name: string,   // "save_whiteboard_snapshot" | "save_review_note"
-  result: unknown // ツールの戻り値（構造はツール仕様参照）
+  name: string,   // "save_whiteboard_snapshot" | "save_review_note" | "generate_diagram"
+  result: unknown // ツールの戻り値
+}
+```
+
+#### AnnotationMessage
+```typescript
+{
+  type: "annotation",
+  id: string,
+  x: number,        // 正規化座標 0.0-1.0
+  y: number,
+  label: string,
+  annotation_type: "circle" | "arrow" | "label" | "rectangle",
+  severity: "critical" | "warning" | "info" | "positive",
+  width?: number,
+  height?: number
+}
+```
+- バックグラウンド分析結果から自動生成（エージェントのツール呼び出しではない）
+- 30秒で自動消去
+
+#### AgentStateMessage
+```typescript
+{
+  type: "agent_state",
+  mood: "neutral" | "impressed" | "concerned" | "surprised" | "thinking",
+  trigger: string
+}
+```
+
+#### SnapshotSavedMessage
+```typescript
+{
+  type: "snapshot_saved",
+  snapshot_id: string,
+  description: string
+}
+```
+
+#### DiagramGeneratingMessage
+```typescript
+{
+  type: "diagram_generating",
+  diagram_id: string
+}
+```
+
+#### DiagramGeneratedMessage
+```typescript
+{
+  type: "diagram_generated",
+  diagram_id: string,
+  url: string  // SVGファイルURL
+}
+```
+
+#### DiagramErrorMessage
+```typescript
+{
+  type: "diagram_error",
+  diagram_id: string,
+  error: string
+}
+```
+
+#### WhiteboardAnalysisMessage
+```typescript
+{
+  type: "whiteboard_analysis",
+  components: AnalysisComponent[],
+  connections: AnalysisConnection[],
+  issues: AnalysisIssue[]
+}
+```
+
+#### ErrorMessage
+```typescript
+{
+  type: "error",
+  message: string
 }
 ```
 
@@ -276,7 +393,7 @@ GET /health
 ```json
 {
   "status": "healthy",
-  "model": "gemini-2.5-flash-native-audio-latest",
+  "model_candidates": ["gemini-2.5-flash-native-audio-preview-09-2025"],
   "firestore": true,
   "storage": true
 }
@@ -299,7 +416,7 @@ GET /api/sessions/{session_id}/notes
       "finding": "string",
       "severity": "critical | warning | info | positive",
       "recommendation": "string",
-      "timestamp": "2026-03-01T00:00:00+00:00"
+      "timestamp": "2026-03-17T00:00:00+00:00"
     }
   ]
 }
@@ -311,20 +428,29 @@ GET /api/sessions/{session_id}/notes
 GET /api/sessions/{session_id}/snapshots
 ```
 
-**レスポンス:**
-```json
-{
-  "session_id": "string",
-  "snapshots": [
-    {
-      "snapshot_id": "string",
-      "image_url": "gs://bucket/session/snapshots/timestamp_id.jpg",
-      "description": "string",
-      "timestamp": "2026-03-01T00:00:00+00:00"
-    }
-  ]
-}
+### 6.4 スナップショット画像取得
+
 ```
+GET /api/snapshots/{session_id}/{snapshot_id}.jpg
+```
+
+ローカルキャッシュ → GCS フォールバックで画像を返す。
+
+### 6.5 画像アップロード
+
+```
+POST /api/sessions/{session_id}/upload
+```
+
+PNG/WebP は自動的にJPEGに変換される。
+
+### 6.6 スナップショット削除
+
+```
+DELETE /api/snapshots/{session_id}/{snapshot_id}
+```
+
+ローカルキャッシュ + ADK状態 + Firestore + GCS から削除。
 
 ---
 
@@ -381,6 +507,14 @@ ADK `ToolContext.state` に格納されるデータ:
             "recommendation": "string",
             "timestamp": "ISO8601"
         }
+    ],
+    "diagrams": [
+        {
+            "diagram_id": "dia12345",
+            "description": "string",
+            "status": "queued",
+            "timestamp": "ISO8601"
+        }
     ]
 }
 ```
@@ -395,6 +529,40 @@ ADK `ToolContext.state` に格納されるデータ:
     summary.json
 ```
 
+### 7.4 構造化分析データモデル（WhiteboardState）
+
+`whiteboard_state.py` に定義:
+
+```python
+@dataclass
+class Component:
+    name: str
+    type: str       # e.g. "database", "service", "load_balancer"
+    x: float        # 正規化座標 0.0-1.0
+    y: float
+    confidence: float
+
+@dataclass
+class Connection:
+    source: str
+    target: str
+    label: str
+    protocol: str   # e.g. "HTTP", "gRPC", "WebSocket"
+
+@dataclass
+class DetectedIssue:
+    category: str   # security | scalability | reliability | cost | operations
+    severity: str   # critical | warning | info
+    description: str
+    affected_components: list[str]
+
+@dataclass
+class WhiteboardState:
+    components: list[Component]
+    connections: list[Connection]
+    issues: list[DetectedIssue]
+```
+
 ---
 
 ## 8. 環境変数仕様
@@ -404,11 +572,19 @@ ADK `ToolContext.state` に格納されるデータ:
 | `GOOGLE_CLOUD_PROJECT` | 推奨 | `""` | GCP プロジェクト ID。未設定でも起動可能（Firestoreは無効化） |
 | `GOOGLE_CLOUD_REGION` | 任意 | `us-central1` | GCP リージョン |
 | `GOOGLE_API_KEY` | **必須** | `""` | Gemini API キー（AI Studio で取得）。未設定時はエラー |
+| `GEMINI_MODEL_NAME` | 任意 | `gemini-2.5-flash-native-audio-preview-09-2025` | Live API 用モデル名 |
+| `GEMINI_FALLBACK_MODEL_NAMES` | 任意 | `gemini-2.5-flash-native-audio-preview-12-2025` | フォールバックモデル（CSV） |
 | `FIRESTORE_DATABASE` | 任意 | `(default)` | Firestore データベース ID |
 | `GCS_BUCKET_NAME` | 任意 | `""` | Cloud Storage バケット名。未設定時はストレージ無効化 |
 | `BACKEND_PORT` | 任意 | `8080` | バックエンドリッスンポート |
 | `BACKEND_HOST` | 任意 | `0.0.0.0` | バックエンドリッスンホスト |
 | `CORS_ORIGINS` | 任意 | `*` | CORS 許可オリジン（カンマ区切り） |
+| `ANALYSIS_ENABLED` | 任意 | `true` | Perception Layer の有効/無効 |
+| `ANALYSIS_INTERVAL_S` | 任意 | `10.0` | 分析実行間隔（秒） |
+| `ANALYSIS_MODEL_NAME` | 任意 | `gemini-3.1-flash-lite-preview` | 分析用モデル名 |
+| `ANALYSIS_THINKING_LEVEL` | 任意 | `""` | 分析モデルの thinking level（budget=0の場合のみ有効） |
+| `ANALYSIS_THINKING_BUDGET` | 任意 | `512` | 分析モデルの thinking budget |
+| `ANALYSIS_MEDIA_RESOLUTION` | 任意 | `medium` | 分析時の画像解像度 |
 | `NEXT_PUBLIC_BACKEND_URL` | 任意 | `http://localhost:8080` | フロントエンドからのバックエンド HTTP URL |
 | `NEXT_PUBLIC_WS_URL` | 任意 | `ws://localhost:8080/ws` | フロントエンドからの WebSocket 接続先 |
 
@@ -452,7 +628,7 @@ npm run lint   # ESLint
 ```bash
 # deploy.sh を使用
 chmod +x deploy.sh
-./deploy.sh
+./deploy.sh --project YOUR_PROJECT_ID --region us-central1
 
 # または手動（バックエンドのみ）
 cd backend
@@ -499,6 +675,8 @@ terraform apply
 | 映像フレームレート | 1 fps（固定） |
 | WebSocket 再接続時間 | 指数バックオフ（1秒〜30秒） |
 | バックエンド応答性 | 非同期 I/O（asyncio）で並列処理 |
+| ダイアグラム生成 | 3-7秒（テキストモデル使用） |
+| バックグラウンド分析 | 10-30秒間隔 |
 
 ### 10.2 可用性
 
@@ -506,6 +684,7 @@ terraform apply
 - **Barge-in:** Gemini Live API の自動音声活動検出（AAD）により実現
 - **セッション再接続:** `session_resumption=SessionResumptionConfig()` による自動再接続
 - **WebSocket 自動再接続:** フロントエンド側で指数バックオフ付き自動再接続
+- **Recovery Task:** セッション健全性監視、偽barge-in検出、スタック応答検知
 
 ### 10.3 セキュリティ
 
@@ -513,6 +692,7 @@ terraform apply
 - `GOOGLE_API_KEY` は環境変数で管理（コードに直書きしない）
 - Cloud Run はサービスアカウントで最小権限原則（Firestore User / Storage Object Admin のみ）
 - Cloud Storage バケットは ACL パブリック非公開（GCS URI 経由のみアクセス）
+- SVGダイアグラム生成時にscriptタグをサニタイズ
 
 ### 10.4 ハルシネーション対策
 

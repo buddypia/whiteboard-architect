@@ -90,14 +90,14 @@
   <!-- Audio Capture -->
   <rect x="60" y="244" width="200" height="80" rx="10" fill="#0f1729" stroke="#10b981" stroke-width="1.5" filter="url(#sh2)"/>
   <text x="160" y="270" text-anchor="middle" fill="#10b981" font-size="11" font-weight="600">useAudioCapture</text>
-  <text x="160" y="288" text-anchor="middle" fill="#64748b" font-size="9">AudioWorklet → float32ToInt16()</text>
-  <text x="160" y="303" text-anchor="middle" fill="#64748b" font-size="9">→ base64 encode → WS send</text>
+  <text x="160" y="288" text-anchor="middle" fill="#64748b" font-size="9">AudioWorklet -> float32ToInt16()</text>
+  <text x="160" y="303" text-anchor="middle" fill="#64748b" font-size="9">-> base64 encode -> WS send</text>
 
   <!-- Video Capture -->
   <rect x="290" y="244" width="200" height="80" rx="10" fill="#0f1729" stroke="#3b82f6" stroke-width="1.5" filter="url(#sh2)"/>
   <text x="390" y="270" text-anchor="middle" fill="#3b82f6" font-size="11" font-weight="600">useVideoCapture</text>
   <text x="390" y="288" text-anchor="middle" fill="#64748b" font-size="9">canvas.drawImage()</text>
-  <text x="390" y="303" text-anchor="middle" fill="#64748b" font-size="9">→ toDataURL("image/jpeg", 0.7)</text>
+  <text x="390" y="303" text-anchor="middle" fill="#64748b" font-size="9">-> toDataURL("image/jpeg", 0.7)</text>
 
   <!-- WebSocket -->
   <rect x="520" y="244" width="200" height="80" rx="10" fill="#0f1729" stroke="#f59e0b" stroke-width="1.5" filter="url(#sh2)"/>
@@ -109,7 +109,7 @@
   <rect x="750" y="244" width="200" height="80" rx="10" fill="#0f1729" stroke="#8b5cf6" stroke-width="1.5" filter="url(#sh2)"/>
   <text x="850" y="268" text-anchor="middle" fill="#8b5cf6" font-size="11" font-weight="600">useAudioPlayback</text>
   <text x="850" y="286" text-anchor="middle" fill="#64748b" font-size="9">Gapless sequential scheduling</text>
-  <text x="850" y="301" text-anchor="middle" fill="#64748b" font-size="9">Barge-in: 200ms mute window</text>
+  <text x="850" y="301" text-anchor="middle" fill="#64748b" font-size="9">Barge-in: 400ms grace period</text>
 
   <!-- SessionApp -->
   <rect x="980" y="244" width="180" height="80" rx="10" fill="#0f1729" stroke="#06b6d4" stroke-width="1.5" filter="url(#sh2)"/>
@@ -117,7 +117,7 @@
   <text x="1070" y="286" text-anchor="middle" fill="#64748b" font-size="9">Event routing + State</text>
   <text x="1070" y="301" text-anchor="middle" fill="#64748b" font-size="9">Transcript / Notes / Mood</text>
 
-  <!-- Input → Frontend arrows -->
+  <!-- Input -> Frontend arrows -->
   <line x1="135" y1="190" x2="135" y2="242" stroke="#10b981" stroke-width="1.5" marker-end="url(#a2g)"/>
   <line x1="315" y1="190" x2="370" y2="242" stroke="#3b82f6" stroke-width="1.5" marker-end="url(#a2b)"/>
   <line x1="495" y1="190" x2="580" y2="242" stroke="#f59e0b" stroke-width="1.5" marker-end="url(#a2a)"/>
@@ -145,19 +145,19 @@
   <text x="1005" y="348" fill="#06b6d4" font-size="8">{type:"transcript"}</text>
 
   <!-- ========== ROW 4: BACKEND PROCESSING ========== -->
-  <text x="60" y="445" fill="#94a3b8" font-size="12" font-weight="600" letter-spacing="2">BACKEND PROCESSING</text>
+  <text x="60" y="445" fill="#94a3b8" font-size="12" font-weight="600" letter-spacing="2">BACKEND PROCESSING (4 PARALLEL TASKS)</text>
 
   <!-- Upstream Task -->
   <rect x="60" y="458" width="240" height="90" rx="10" fill="#0f1729" stroke="#3b82f6" stroke-width="1.5" filter="url(#sh2)"/>
   <text x="180" y="482" text-anchor="middle" fill="#3b82f6" font-size="12" font-weight="600">upstream_task</text>
-  <text x="180" y="500" text-anchor="middle" fill="#64748b" font-size="9">Audio: PCM → Blob → LiveRequestQueue</text>
-  <text x="180" y="515" text-anchor="middle" fill="#64748b" font-size="9">Video: JPEG → Blob → LiveRequestQueue</text>
-  <text x="180" y="530" text-anchor="middle" fill="#64748b" font-size="9">Text/Control → Content → Queue</text>
+  <text x="180" y="500" text-anchor="middle" fill="#64748b" font-size="9">Audio: PCM -> Blob -> LiveRequestQueue</text>
+  <text x="180" y="515" text-anchor="middle" fill="#64748b" font-size="9">Video: JPEG -> Blob -> LiveRequestQueue</text>
+  <text x="180" y="530" text-anchor="middle" fill="#64748b" font-size="9">Text/Control -> Content -> Queue</text>
 
-  <!-- Change Detector -->
-  <rect x="60" y="560" width="240" height="50" rx="10" fill="#0f1729" stroke="#f59e0b" stroke-width="1" stroke-dasharray="5,3" filter="url(#sh2)"/>
-  <text x="180" y="582" text-anchor="middle" fill="#fbbf24" font-size="10" font-weight="600">ChangeDetector (optional)</text>
-  <text x="180" y="598" text-anchor="middle" fill="#64748b" font-size="9">160x120 grayscale diff > 5% → prompt inject</text>
+  <!-- WhiteboardAnalyzer (Perception Layer) -->
+  <rect x="60" y="560" width="240" height="50" rx="10" fill="#0f1729" stroke="#06b6d4" stroke-width="1" stroke-dasharray="5,3" filter="url(#sh2)"/>
+  <text x="180" y="582" text-anchor="middle" fill="#22d3ee" font-size="10" font-weight="600">WhiteboardAnalyzer (Perception Layer)</text>
+  <text x="180" y="598" text-anchor="middle" fill="#64748b" font-size="9">gemini-3.1-flash-lite every 10s -> context inject</text>
 
   <!-- LiveRequestQueue -->
   <rect x="340" y="458" width="180" height="90" rx="10" fill="#0f1729" stroke="#f59e0b" stroke-width="1.5" filter="url(#sh2)"/>
@@ -176,9 +176,14 @@
   <!-- Downstream Task -->
   <rect x="780" y="458" width="240" height="90" rx="10" fill="#0f1729" stroke="#8b5cf6" stroke-width="1.5" filter="url(#sh2)"/>
   <text x="900" y="482" text-anchor="middle" fill="#8b5cf6" font-size="12" font-weight="600">downstream_task</text>
-  <text x="900" y="500" text-anchor="middle" fill="#64748b" font-size="9">Audio → base64 → WS {type:"audio"}</text>
-  <text x="900" y="515" text-anchor="middle" fill="#64748b" font-size="9">Transcript → WS {type:"transcript"}</text>
-  <text x="900" y="530" text-anchor="middle" fill="#64748b" font-size="9">Tool/Annotation/State → WS</text>
+  <text x="900" y="500" text-anchor="middle" fill="#64748b" font-size="9">Audio -> base64 -> WS {type:"audio"}</text>
+  <text x="900" y="515" text-anchor="middle" fill="#64748b" font-size="9">Transcript -> WS {type:"transcript"}</text>
+  <text x="900" y="530" text-anchor="middle" fill="#64748b" font-size="9">Tool/Annotation/State -> WS</text>
+
+  <!-- Recovery Task -->
+  <rect x="780" y="560" width="240" height="50" rx="10" fill="#0f1729" stroke="#ef4444" stroke-width="1" stroke-dasharray="5,3" filter="url(#sh2)"/>
+  <text x="900" y="582" text-anchor="middle" fill="#fca5a5" font-size="10" font-weight="600">recovery_task</text>
+  <text x="900" y="598" text-anchor="middle" fill="#64748b" font-size="9">Session health monitor + false barge-in detection</text>
 
   <!-- Backend arrows -->
   <line x1="160" y1="412" x2="160" y2="456" stroke="#3b82f6" stroke-width="1.5" marker-end="url(#a2b)"/>
@@ -195,10 +200,10 @@
   <rect x="60" y="664" width="320" height="30" rx="10" fill="url(#pu2)" opacity="0.8"/>
   <text x="220" y="684" text-anchor="middle" fill="#fff" font-size="12" font-weight="600">Gemini Live API (Bidi-Streaming)</text>
   <text x="220" y="714" text-anchor="middle" fill="#c4b5fd" font-size="10">Model: gemini-2.5-flash-native-audio-preview-09-2025</text>
-  <text x="220" y="732" text-anchor="middle" fill="#c4b5fd" font-size="10">Voice: Aoede (ja-JP) | Thinking: 1024 tokens</text>
+  <text x="220" y="732" text-anchor="middle" fill="#c4b5fd" font-size="10">Voice: Aoede | Language: English</text>
   <text x="220" y="750" text-anchor="middle" fill="#94a3b8" font-size="9">Input: Audio + Video + Text | Output: Audio + Text + Function Calls</text>
 
-  <!-- Arrow Runner ↔ Gemini -->
+  <!-- Arrow Runner <-> Gemini -->
   <line x1="650" y1="550" x2="350" y2="662" stroke="#8b5cf6" stroke-width="2" marker-end="url(#a2p)"/>
   <line x1="300" y1="662" x2="600" y2="550" stroke="#10b981" stroke-width="2" marker-end="url(#a2g)"/>
 
@@ -214,10 +219,10 @@
   <!-- Tools -->
   <rect x="660" y="664" width="190" height="100" rx="10" fill="#0f1729" stroke="#ef4444" stroke-width="1.5" filter="url(#sh2)"/>
   <rect x="660" y="664" width="190" height="30" rx="10" fill="url(#re2)" opacity="0.8"/>
-  <text x="755" y="684" text-anchor="middle" fill="#fff" font-size="12" font-weight="600">ADK Tools</text>
+  <text x="755" y="684" text-anchor="middle" fill="#fff" font-size="12" font-weight="600">ADK Tools (3)</text>
   <text x="755" y="712" text-anchor="middle" fill="#fca5a5" font-size="9">save_whiteboard_snapshot</text>
   <text x="755" y="730" text-anchor="middle" fill="#fca5a5" font-size="9">save_review_note</text>
-  <text x="755" y="748" text-anchor="middle" fill="#fca5a5" font-size="9">add_annotation</text>
+  <text x="755" y="748" text-anchor="middle" fill="#fca5a5" font-size="9">generate_diagram</text>
 
   <!-- Cloud Services -->
   <rect x="890" y="664" width="130" height="100" rx="10" fill="#0f1729" stroke="#06b6d4" stroke-width="1.5" filter="url(#sh2)"/>
@@ -232,13 +237,12 @@
   <text x="1105" y="684" text-anchor="middle" fill="#fff" font-size="11" font-weight="600">Cloud Storage</text>
   <text x="1105" y="712" text-anchor="middle" fill="#fbbf24" font-size="9">{session_id}/</text>
   <text x="1105" y="728" text-anchor="middle" fill="#fbbf24" font-size="9">  snapshots/*.jpg</text>
-  <text x="1105" y="744" text-anchor="middle" fill="#fbbf24" font-size="9">  summary.json</text>
 
-  <!-- Tool → Cloud arrows -->
+  <!-- Tool -> Cloud arrows -->
   <line x1="852" y1="730" x2="888" y2="730" stroke="#06b6d4" stroke-width="1.5" marker-end="url(#a2c)" stroke-dasharray="5,3"/>
   <line x1="852" y1="715" x2="1038" y2="715" stroke="#f59e0b" stroke-width="1.5" marker-end="url(#a2a)" stroke-dasharray="5,3"/>
 
-  <!-- Agent → Tools arrow -->
+  <!-- Agent -> Tools arrow -->
   <line x1="622" y1="720" x2="658" y2="720" stroke="#ef4444" stroke-width="1.5" marker-end="url(#a2r)"/>
 
   <!-- ========== DATA FORMAT LEGEND ========== -->
